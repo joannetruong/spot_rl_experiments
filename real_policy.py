@@ -80,41 +80,6 @@ class RealPolicy:
 
         return actions
 
-
-class GazePolicy(RealPolicy):
-    def __init__(self, checkpoint_path, device):
-        observation_space = SpaceDict(
-            {
-                "arm_depth": spaces.Box(
-                    low=0.0, high=1.0, shape=(240, 320, 1), dtype=np.float32
-                ),
-                "arm_depth_bbox": spaces.Box(
-                    low=0.0, high=1.0, shape=(240, 320, 1), dtype=np.float32
-                ),
-                "joint": spaces.Box(low=0.0, high=1.0, shape=(4,), dtype=np.float32),
-                "is_holding": spaces.Box(
-                    low=0.0, high=1.0, shape=(1,), dtype=np.float32
-                ),
-            }
-        )
-        action_space = spaces.Box(-1.0, 1.0, (4,))
-        super().__init__(checkpoint_path, observation_space, action_space, device)
-
-
-class PlacePolicy(RealPolicy):
-    def __init__(self, checkpoint_path, device):
-        observation_space = SpaceDict(
-            {
-                "joint": spaces.Box(low=0.0, high=1.0, shape=(4,), dtype=np.float32),
-                "obj_start_sensor": spaces.Box(
-                    low=0.0, high=1.0, shape=(3,), dtype=np.float32
-                ),
-            }
-        )
-        action_space = spaces.Box(-1.0, 1.0, (4,))
-        super().__init__(checkpoint_path, observation_space, action_space, device)
-
-
 class NavPolicy(RealPolicy):
     def __init__(self, checkpoint_path, device):
         observation_space = SpaceDict(
@@ -124,9 +89,6 @@ class NavPolicy(RealPolicy):
                 ),
                 "spot_right_depth": spaces.Box(
                     low=0.0, high=1.0, shape=(212, 120, 1), dtype=np.float32
-                ),
-                "goal_heading": spaces.Box(
-                    low=-np.pi, high=np.pi, shape=(1,), dtype=np.float32
                 ),
                 "target_point_goal_gps_and_compass_sensor": spaces.Box(
                     low=np.finfo(np.float32).min,
@@ -142,11 +104,11 @@ class NavPolicy(RealPolicy):
 
 
 if __name__ == "__main__":
-    gaze_policy = GazePolicy(
+    nav_policy = NavPolicy(
         "weights/bbox_mask_5thresh_autograsp_shortrange_seed1_36.pth",
         device="cpu",
     )
-    gaze_policy.reset()
+    nav_policy.reset()
     observations = {
         "arm_depth": np.zeros([240, 320, 1], dtype=np.float32),
         "arm_depth_bbox": np.zeros([240, 320, 1], dtype=np.float32),

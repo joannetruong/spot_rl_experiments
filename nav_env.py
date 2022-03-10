@@ -13,8 +13,7 @@ SUCCESS_DISTANCE = 0.3
 SUCCESS_ANGLE_DIST = 0.0872665  # 5 radians
 NAV_WEIGHTS = "weights/two_cams_with_noise_seed4_ckpt.4.pth"
 GOAL_XY = [6, 0]
-GOAL_HEADING = 90  # positive direction is CCW
-GOAL_AS_STR = ",".join([str(i) for i in GOAL_XY]) + f",{GOAL_HEADING}"
+GOAL_AS_STR = ",".join([str(i) for i in GOAL_XY])
 
 
 def main(spot):
@@ -23,12 +22,11 @@ def main(spot):
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    policy = NavPolicy(NAV_WEIGHTS, device=device)
     policy.reset()
 
     env = SpotNavEnv(spot)
-    goal_x, goal_y, goal_heading = [float(i) for i in args.goal.split(",")]
-    observations = env.reset((goal_x, goal_y), np.deg2rad(goal_heading))
+    goal_x, goal_y = [float(i) for i in args.goal.split(",")]
+    observations = env.reset(goal_x, goal_y)
     done = False
     say("Starting episode")
     time.sleep(2)
@@ -46,13 +44,11 @@ class SpotNavEnv(SpotBaseEnv):
     def __init__(self, spot: Spot):
         super().__init__(spot)
         self.goal_xy = None
-        self.goal_heading = None
         self.succ_distance = SUCCESS_DISTANCE
         self.succ_angle = SUCCESS_ANGLE_DIST
 
-    def reset(self, goal_xy, goal_heading):
+    def reset(self, goal_xy):
         self.goal_xy = np.array(goal_xy, dtype=np.float32)
-        self.goal_heading = goal_heading
         observations = super().reset()
         assert len(self.goal_xy) == 2
 
@@ -65,7 +61,7 @@ class SpotNavEnv(SpotBaseEnv):
         return succ
 
     def get_observations(self):
-        return self.get_nav_observation(self.goal_xy, self.goal_heading)
+        return self.get_nav_observation(self.goal_xy)
 
 
 if __name__ == "__main__":

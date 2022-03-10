@@ -10,20 +10,13 @@ from sensor_msgs.msg import CompressedImage
 from spot_wrapper.spot import Spot, SpotCamIds, image_response_to_cv2, scale_depth_img
 from std_msgs.msg import ByteMultiArray, Float32MultiArray
 
-MASK_RCNN_VIZ_TOPIC = "/mask_rcnn_visualizations"
 FRONT_DEPTH_TOPIC = "/spot_cams/filtered_front_depth"
-HAND_DEPTH_TOPIC = f"/spot_cams/{SpotCamIds.HAND_DEPTH_IN_HAND_COLOR_FRAME}"
-HAND_RGB_TOPIC = f"/spot_cams/{SpotCamIds.HAND_COLOR}"
 ROBOT_STATE_TOPIC = "/robot_state"
 SRC2MSG = {
     SpotCamIds.FRONTLEFT_DEPTH: ByteMultiArray,
     SpotCamIds.FRONTRIGHT_DEPTH: ByteMultiArray,
-    SpotCamIds.HAND_DEPTH_IN_HAND_COLOR_FRAME: ByteMultiArray,
-    SpotCamIds.HAND_COLOR: CompressedImage,
 }
 MAX_DEPTH = 3.5
-MAX_GRIPPER_DEPTH = 1.7
-
 
 class SpotRosPublisher:
     def __init__(self, spot):
@@ -68,21 +61,6 @@ class SpotRosPublisher:
                 and self.filter_front_depth
             ):
                 depth_eyes[src] = img
-                continue  # Skip publishing now if we are filtering first
-            elif src == SpotCamIds.HAND_DEPTH_IN_HAND_COLOR_FRAME:
-                img = scale_depth_img(img, max_depth=MAX_GRIPPER_DEPTH)
-                img = np.uint8(img * 255.0)
-
-            if src == SpotCamIds.HAND_COLOR:
-                msg = self.cv_bridge.cv2_to_compressed_imgmsg(img)
-            else:
-                # img must be uint8 image
-                msg = blosc.pack_array(
-                    img, cname="zstd", clevel=1, shuffle=blosc.NOSHUFFLE
-                )
-                msg = ByteMultiArray(data=[i - 128 for i in msg])
-
-            pub.publish(msg)
 
         # Filter and publish
         if self.filter_front_depth:
@@ -132,27 +110,6 @@ class SpotRosSubscriber:
             buff_size=2 ** 24,
         )
         rospy.Subscriber(
-            HAND_DEPTH_TOPIC,
-            ByteMultiArray,
-            self.hand_depth_callback,
-            queue_size=1,
-            buff_size=2 ** 24,
-        )
-        rospy.Subscriber(
-            HAND_RGB_TOPIC,
-            CompressedImage,
-            self.hand_rgb_callback,
-            queue_size=1,
-            buff_size=2 ** 24,
-        )
-        rospy.Subscriber(
-            MASK_RCNN_VIZ_TOPIC,
-            CompressedImage,
-            self.viz_callback,
-            queue_size=1,
-            buff_size=2 ** 24,
-        )
-        rospy.Subscriber(
             ROBOT_STATE_TOPIC,
             Float32MultiArray,
             self.robot_state_callback,
@@ -164,13 +121,9 @@ class SpotRosSubscriber:
 
         # Msg holders
         self.front_depth = None
-        self.hand_depth = None
-        self.hand_rgb = None
-        self.det = None
         self.x = 0.0
         self.y = 0.0
         self.yaw = 0.0
-        self.current_arm_pose = None
 
         self.updated = False
         rospy.loginfo(f"[{node_name}]: Subscribing has started.")
@@ -179,39 +132,14 @@ class SpotRosSubscriber:
         self.front_depth = msg
         self.updated = True
 
-    def hand_depth_callback(self, msg):
-        self.hand_depth = msg
-        self.updated = True
-
-    def hand_rgb_callback(self, msg):
-        self.hand_rgb = msg
-        self.updated = True
-
-    def viz_callback(self, msg):
-        self.det = msg
-        self.updated = True
-
     def robot_state_callback(self, msg):
         self.x, self.y, self.yaw = msg.data[:3]
-        self.current_arm_pose = msg.data[3:]
 
     @property
     def front_depth_img(self):
         if self.front_depth is None:
             return None
         return decode_ros_blosc(self.front_depth)
-
-    @property
-    def hand_depth_img(self):
-        if self.hand_depth is None:
-            return None
-        return decode_ros_blosc(self.hand_depth)
-
-    @property
-    def hand_rgb_img(self):
-        if self.hand_rgb is None:
-            return None
-        return self.cv_bridge.compressed_imgmsg_to_cv2(self.hand_rgb)
 
 
 class SpotRosProprioceptionPublisher:
@@ -236,9 +164,8 @@ class SpotRosProprioceptionPublisher:
         )
         msg = Float32MultiArray()
         xy_yaw = self.spot.get_xy_yaw(robot_state=robot_state)
-        joints = self.spot.get_arm_proprioception(robot_state=robot_state).values()
         msg.data = np.array(
-            list(xy_yaw) + [j.position.value for j in joints],
+            list(xy_yaw),
             dtype=np.float32,
         )
         self.pub.publish(msg)

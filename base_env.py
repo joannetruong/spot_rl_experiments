@@ -8,17 +8,12 @@ from spot_wrapper.spot import Spot, wrap_heading
 from spot_ros_node import SpotRosSubscriber
 
 CTRL_HZ = 2
-MAX_EPISODE_STEPS = 100
+MAX_EPISODE_STEPS = 200
 
 # Base action params
 MAX_LIN_VEL = 0.5  # m/s
-MAX_ANG_VEL = 0.523599  # 30 degrees/s, in radians
+MAX_ANG_VEL = 0.3  # 17.19 degrees/s, in radians
 VEL_TIME = 1 / CTRL_HZ
-
-def pad_action(action):
-    """We only control 4 out of 6 joints; add zeros to non-controllable indices."""
-    return np.array([*action[:3], 0.0, action[3], 0.0])
-
 
 def rescale_actions(actions, action_thresh=0.05):
     actions = np.clip(actions, -1, 1)
@@ -43,7 +38,6 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         super().__init__("spot_reality_gym")
         self.spot = spot
 
-        # ROS subscribers
         # General environment parameters
         self.ctrl_hz = CTRL_HZ
         self.max_episode_steps = MAX_EPISODE_STEPS
@@ -63,7 +57,6 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         # Arrange Spot into initial configuration
         assert spot.spot_lease is not None, "Need motor control of Spot!"
         spot.power_on()
-        say("Standing up")
         spot.blocking_stand()
 
     def reset(self, *args, **kwargs):
@@ -111,7 +104,7 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         return observations, reward, done, info
 
     @staticmethod
-    def get_nav_success(observations, success_distance, success_angle):
+    def get_nav_success(observations, success_distance):
         # Is the agent at the goal?
         dist_to_goal, _ = observations["target_point_goal_gps_and_compass_sensor"]
         at_goal = dist_to_goal < success_distance
@@ -127,12 +120,12 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
             f"yaw: {np.rad2deg(self.yaw):.2f}\t"
         )
 
-    def get_nav_observation(self, goal_xy, goal_heading):
+    def get_nav_observation(self, goal_xy):
         observations = {}
 
         # Get visual observations
         front_depth = cv2.resize(
-            self.front_depth_img, (120 * 2, 212), interpolation=cv2.INTER_AREA
+            self.front_depth_img, (256, 256), interpolation=cv2.INTER_AREA
         )
         front_depth = np.float32(front_depth) / 255.0
         # Add dimension for channel (unsqueeze)
@@ -148,7 +141,6 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         rho_theta = np.array([rho, wrap_heading(theta)], dtype=np.float32)
 
         # Get goal heading observation
-        goal_heading_ = -np.array([goal_heading - self.yaw], dtype=np.float32)
         observations["target_point_goal_gps_and_compass_sensor"] = rho_theta
 
         return observations

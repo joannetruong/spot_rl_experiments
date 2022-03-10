@@ -85,10 +85,10 @@ class NavPolicy(RealPolicy):
         observation_space = SpaceDict(
             {
                 "spot_left_depth": spaces.Box(
-                    low=0.0, high=1.0, shape=(212, 120, 1), dtype=np.float32
+                    low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
                 ),
                 "spot_right_depth": spaces.Box(
-                    low=0.0, high=1.0, shape=(212, 120, 1), dtype=np.float32
+                    low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
                 ),
                 "target_point_goal_gps_and_compass_sensor": spaces.Box(
                     low=np.finfo(np.float32).min,
@@ -105,15 +105,14 @@ class NavPolicy(RealPolicy):
 
 if __name__ == "__main__":
     nav_policy = NavPolicy(
-        "weights/bbox_mask_5thresh_autograsp_shortrange_seed1_36.pth",
+        "weights/spot_cam_kinematic_hm3d_gibson_ckpt_27.pth",
         device="cpu",
     )
     nav_policy.reset()
     observations = {
-        "arm_depth": np.zeros([240, 320, 1], dtype=np.float32),
-        "arm_depth_bbox": np.zeros([240, 320, 1], dtype=np.float32),
-        "joint": np.zeros(4, dtype=np.float32),
-        "is_holding": np.zeros(1, dtype=np.float32),
+        "spot_left_depth": np.zeros([256, 128, 1], dtype=np.float32),
+        "spot_right_depth": np.zeros([256, 128, 1], dtype=np.float32),
+        "target_point_goal_gps_and_compass_sensor": np.zeros(2, dtype=np.float32),
     }
-    actions = gaze_policy.act(observations)
+    actions = nav_policy.act(observations)
     print("actions:", actions)

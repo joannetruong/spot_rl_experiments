@@ -6,7 +6,6 @@ import cv2
 import numpy as np
 import rospy
 from cv_bridge import CvBridge
-from sensor_msgs.msg import CompressedImage
 from spot_wrapper.spot import Spot, SpotCamIds, image_response_to_cv2, scale_depth_img
 from std_msgs.msg import ByteMultiArray, Float32MultiArray
 

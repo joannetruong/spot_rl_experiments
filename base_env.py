@@ -15,24 +15,6 @@ MAX_LIN_VEL = 0.5  # m/s
 MAX_ANG_VEL = 0.3  # 17.19 degrees/s, in radians
 VEL_TIME = 1 / CTRL_HZ
 
-def rescale_actions(actions, action_thresh=0.05):
-    actions = np.clip(actions, -1, 1)
-    # Silence low actions
-    actions[np.abs(actions) < action_thresh] = 0.0
-    # Remap action scaling to compensate for silenced values
-    action_offsets = []
-    for v in actions:
-        if v > 0:
-            action_offsets.append(action_thresh)
-        elif v < 0:
-            action_offsets.append(-action_thresh)
-        else:
-            action_offsets.append(0)
-    actions = (actions - np.array(action_offsets)) / (1.0 - action_thresh)
-
-    return actions
-
-
 class SpotBaseEnv(SpotRosSubscriber, gym.Env):
     def __init__(self, spot: Spot):
         super().__init__("spot_reality_gym")
@@ -79,11 +61,12 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
 
         if base_action is not None:
             # Command velocities using the input action
-            x_vel, ang_vel = base_action
+            x_vel, y_vel, ang_vel = base_action
             x_vel = np.clip(x_vel, -1, 1) * self.max_lin_vel
+            y_vel = np.clip(x_vel, -1, 1) * self.max_lin_vel
             ang_vel = np.clip(ang_vel, -1, 1) * self.max_ang_vel
-            # No horizontal velocity
-            self.spot.set_base_velocity(x_vel, 0.0, ang_vel, self.vel_time)
+            # Spot-real's horizontal velocity is flipped from Habitat's convention
+            self.spot.set_base_velocity(x_vel, -y_vel, ang_vel, self.vel_time)
 
         # Pause until enough time has passed during this step
         while time.time() < self.last_execution + 1 / self.ctrl_hz:

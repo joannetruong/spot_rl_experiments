@@ -78,6 +78,8 @@ class SpotNavEnv(SpotBaseEnv):
     def step(self, base_action=None):
         prev_xy = np.array([self.x, self.y], dtype=np.float32)
         observations, reward, done, info = super().step(base_action)
+        self.print_nav_stats(observations)
         curr_xy = np.array([self.x, self.y], dtype=np.float32)
         self.episode_distance += np.linalg.norm(curr_xy - prev_xy)
+        self.num_actions += 1
         return observations, reward, done, info

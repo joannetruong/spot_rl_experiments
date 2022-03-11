@@ -5,7 +5,7 @@ import numpy as np
 from spot_ros_node import SpotRosSubscriber
 from spot_wrapper.spot import Spot, wrap_heading
 
-CTRL_HZ = 2
+CTRL_HZ = 1
 MAX_EPISODE_STEPS = 200
 
 # Base action params
@@ -60,9 +60,23 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         if base_action is not None:
             # Command velocities using the input action
             x_vel, ang_vel, y_vel = base_action
-            x_vel = np.clip(x_vel, -1, 1) * self.max_lin_vel
-            y_vel = np.clip(y_vel, -1, 1) * self.max_lin_vel
-            ang_vel = np.clip(ang_vel, -1, 1) * self.max_ang_vel
+
+            x_vel = np.clip(x_vel, -1, 1)
+            ang_vel = np.clip(ang_vel, -1, 1)
+            y_vel = np.clip(y_vel, -1, 1)
+
+            x_vel = (x_vel + 1.0) / 2.0
+            ang_vel = (ang_vel + 1.0) / 2.0
+            y_vel = (y_vel + 1.0) / 2.0
+
+            # Scale actions
+            x_vel = -self.max_lin_vel + x_vel * 2 * self.max_lin_vel
+            ang_vel = -self.max_ang_vel + ang_vel * 2 * self.max_ang_vel
+            y_vel = -self.max_lin_vel + y_vel * 2 * self.max_lin_vel
+
+            # x_vel = np.clip(x_vel, -1, 1) * self.max_lin_vel
+            # y_vel = np.clip(y_vel, -1, 1) * self.max_lin_vel
+            # ang_vel = np.clip(ang_vel, -1, 1) * self.max_ang_vel
             # Spot-real's horizontal velocity is flipped from Habitat's convention
             print(f"STEPPING! Vx: {x_vel}, Vy: {-y_vel}, Vt: {ang_vel}")
             self.spot.set_base_velocity(x_vel, -y_vel, ang_vel, self.vel_time)
@@ -74,7 +88,6 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         self.last_execution = time.time()
 
         observations = self.get_observations()
-
         self.num_steps += 1
         timeout = self.num_steps == self.max_episode_steps
         done = timeout or self.get_success(observations) or self.should_end

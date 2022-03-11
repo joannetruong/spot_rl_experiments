@@ -21,7 +21,7 @@ MAX_DEPTH = 3.5
 
 
 class SpotRosPublisher:
-    def __init__(self, spot):
+    def __init__(self, spot, verbose=False):
         rospy.init_node("spot_ros_node", disable_signals=True)
         self.spot = spot
 
@@ -46,6 +46,7 @@ class SpotRosPublisher:
             )
 
         self.last_publish = time.time()
+        self.verbose = verbose
         rospy.loginfo("[spot_ros_node]: Publishing has started.")
 
     def publish_msgs(self):
@@ -73,11 +74,11 @@ class SpotRosPublisher:
             merged = self.filter_depth(merged, MAX_DEPTH)
             msg = self.cv_bridge.cv2_to_imgmsg(merged, encoding="mono8")
             self.filtered_front_depth_pub.publish(msg)
-
-        rospy.loginfo(
-            f"[spot_ros_node]: Image retrieval / publish time: "
-            f"{1 / retrieval_time:.4f} / {1 / (time.time() - self.last_publish):.4f} Hz"
-        )
+        if self.verbose:
+            rospy.loginfo(
+                f"[spot_ros_node]: Image retrieval / publish time: "
+                f"{1 / retrieval_time:.4f} / {1 / (time.time() - self.last_publish):.4f} Hz"
+            )
         self.last_publish = time.time()
 
     @staticmethod
@@ -151,7 +152,7 @@ class SpotRosSubscriber:
 
 
 class SpotRosProprioceptionPublisher:
-    def __init__(self, spot):
+    def __init__(self, spot, verbose=False):
         rospy.init_node("spot_ros_proprioception_node", disable_signals=True)
         self.spot = spot
 
@@ -166,10 +167,11 @@ class SpotRosProprioceptionPublisher:
             pass
         st = time.time()
         robot_state = self.spot.get_robot_state()
-        rospy.loginfo(
-            f"[spot_ros_proprioception_node]: Proprioception retrieval / publish time: "
-            f"{1/(time.time() - st):.4f} / {1/(time.time() - self.last_publish):.4f} Hz"
-        )
+        if self.verbose:
+            rospy.loginfo(
+                f"[spot_ros_proprioception_node]: Proprioception retrieval / publish time: "
+                f"{1/(time.time() - st):.4f} / {1/(time.time() - self.last_publish):.4f} Hz"
+            )
         msg = Float32MultiArray()
         xy_yaw = self.spot.get_xy_yaw(robot_state=robot_state)
         msg.data = np.array(
@@ -190,6 +192,7 @@ def decode_ros_blosc(msg: ByteMultiArray):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-p", "--proprioception", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 
     if args.proprioception:
@@ -200,7 +203,7 @@ def main():
         cls = SpotRosPublisher
 
     spot = Spot(name)
-    srn = cls(spot)
+    srn = cls(spot, args.verbose)
     while not rospy.is_shutdown():
         srn.publish_msgs()
 

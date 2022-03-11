@@ -12,6 +12,8 @@ NAV_WEIGHTS = "weights/spot_cam_kinematic_hm3d_gibson_ckpt_27.pth"
 GOAL_XY = [1, 0]  # Local coordinates
 GOAL_AS_STR = ",".join([str(i) for i in GOAL_XY])
 
+print(GOAL_AS_STR)
+
 
 def main(spot):
     parser = argparse.ArgumentParser()
@@ -38,7 +40,7 @@ def main(spot):
                 )
                 print(
                     "Final Distance to goal: {:.3f}m".format(
-                        observations["point_goal_gps_and_compass_sensor"][0]
+                        observations["pointgoal_with_gps_compass"][0]
                     )
                 )
                 print("Final # Actions: {}".format(env.num_actions))

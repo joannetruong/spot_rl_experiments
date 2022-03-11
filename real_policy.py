@@ -2,7 +2,8 @@ import numpy as np
 import torch
 from gym import spaces
 from gym.spaces import Dict as SpaceDict
-from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy
+from habitat_baselines.rl.ddppo.policy.resnet_policy import \
+    PointNavResNetPolicy
 from habitat_baselines.utils.common import batch_obs
 
 
@@ -27,7 +28,7 @@ class RealPolicy:
         config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = []
         config.freeze()
 
-        self.policy = PointNavBaselinePolicy.from_config(
+        self.policy = PointNavResNetPolicy.from_config(
             config=config,
             observation_space=observation_space,
             action_space=action_space,
@@ -80,6 +81,7 @@ class RealPolicy:
 
         return actions
 
+
 class NavPolicy(RealPolicy):
     def __init__(self, checkpoint_path, device):
         observation_space = SpaceDict(
@@ -90,7 +92,7 @@ class NavPolicy(RealPolicy):
                 "spot_right_depth": spaces.Box(
                     low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
                 ),
-                "target_point_goal_gps_and_compass_sensor": spaces.Box(
+                "pointgoal_with_gps_compass": spaces.Box(
                     low=np.finfo(np.float32).min,
                     high=np.finfo(np.float32).max,
                     shape=(2,),
@@ -99,7 +101,7 @@ class NavPolicy(RealPolicy):
             }
         )
         # Linear, angular, and horizontal velocity (in that order)
-        action_space = spaces.Box(-1.0, 1.0, (2,))
+        action_space = spaces.Box(-1.0, 1.0, (3,))
         super().__init__(checkpoint_path, observation_space, action_space, device)
 
 
@@ -112,7 +114,7 @@ if __name__ == "__main__":
     observations = {
         "spot_left_depth": np.zeros([256, 128, 1], dtype=np.float32),
         "spot_right_depth": np.zeros([256, 128, 1], dtype=np.float32),
-        "target_point_goal_gps_and_compass_sensor": np.zeros(2, dtype=np.float32),
+        "pointgoal_with_gps_compass": np.zeros(2, dtype=np.float32),
     }
     actions = nav_policy.act(observations)
     print("actions:", actions)

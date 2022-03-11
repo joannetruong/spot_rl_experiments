@@ -1,15 +1,17 @@
+#!/home/spot/anaconda3/envs/outdoor-nav/bin/python
+
 import argparse
 import time
 
 import torch.cuda
+from nav_env import SpotNavEnv
+from real_policy import NavPolicy
 from spot_wrapper.spot import Spot
 
-from real_policy import NavPolicy
-from nav_env import SpotNavEnv
-
 NAV_WEIGHTS = "weights/spot_cam_kinematic_hm3d_gibson_ckpt_27.pth"
-GOAL_XY = [6, 0] # Local coordinates
+GOAL_XY = [1, 0]  # Local coordinates
 GOAL_AS_STR = ",".join([str(i) for i in GOAL_XY])
+
 
 def main(spot):
     parser = argparse.ArgumentParser()
@@ -23,7 +25,7 @@ def main(spot):
 
     env = SpotNavEnv(spot)
     goal_x, goal_y = [float(i) for i in args.goal.split(",")]
-    observations = env.reset(goal_x, goal_y)
+    observations = env.reset([goal_x, goal_y])
     done = False
     time.sleep(2)
     try:
@@ -31,13 +33,20 @@ def main(spot):
             action = policy.act(observations)
             observations, _, done, _ = env.step(base_action=action)
             if done:
-                print('Final Agent Episode Distance: {:.3f}'.format(env.episode_distance))
-                print("Final Distance to goal: {:.3f}m".format(observations["target_point_goal_gps_and_compass_sensor"][0]))
-                print('Final # Actions: {}'.format(env.num_actions))
-                print('Final # Collisions: {}'.format(env.num_collisions))
+                print(
+                    "Final Agent Episode Distance: {:.3f}".format(env.episode_distance)
+                )
+                print(
+                    "Final Distance to goal: {:.3f}m".format(
+                        observations["point_goal_gps_and_compass_sensor"][0]
+                    )
+                )
+                print("Final # Actions: {}".format(env.num_actions))
+                print("Final # Collisions: {}".format(env.num_collisions))
         time.sleep(20)
     finally:
         spot.power_off()
+
 
 if __name__ == "__main__":
     spot = Spot("RealNavEnv")

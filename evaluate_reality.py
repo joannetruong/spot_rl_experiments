@@ -11,6 +11,7 @@ from real_policy import NavPolicy
 from spot_wrapper.spot import Spot
 
 NAV_WEIGHTS = "weights/spot_cam_kinematic_hm3d_gibson_ckpt_27.pth"
+SENSOR_TYPE = "depth"
 GOAL_XY = [1, 0]  # Local coordinates
 GOAL_AS_STR = ",".join([str(i) for i in GOAL_XY])
 
@@ -19,13 +20,16 @@ def main(spot):
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--goal", default=GOAL_AS_STR)
     parser.add_argument("-w", "--weights", default=NAV_WEIGHTS)
+    parser.add_argument("-s", "--sensor-type", default=SENSOR_TYPE)
+    parser.add_argument("-d", "--debug", action="store_true")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    policy = NavPolicy(args.weights, device=device)
+    policy = NavPolicy(args.weights, device, args.sensor_type)
     policy.reset()
 
     env = SpotNavEnv(spot)
+    env.sensor_type = args.sensor_type
     goal_x, goal_y = [float(i) for i in args.goal.split(",")]
     print(f"NAVIGATING TO X: {goal_x}m, Y: {goal_y}m")
     observations = env.reset([goal_x, goal_y])
@@ -33,14 +37,15 @@ def main(spot):
     time.sleep(2)
     try:
         while not done:
-            # cv2.imwrite(
-            #     f"img/left_{env.num_actions}.png",
-            #     (observations["spot_left_depth"] * 256).astype(np.uint8),
-            # )
-            # cv2.imwrite(
-            #     f"img/right_{env.num_actions}.png",
-            #     (observations["spot_right_depth"] * 256).astype(np.uint8),
-            # )
+            if args.debug:
+                cv2.imwrite(
+                    f"img/left_gray_{env.num_actions}.png",
+                    (observations["spot_left_gray"] * 255).astype(np.uint8),
+                )
+                cv2.imwrite(
+                    f"img/right_gray_{env.num_actions}.png",
+                    (observations["spot_right_gray"] * 255).astype(np.uint8),
+                )
             action = policy.act(observations)
             observations, _, done, _ = env.step(base_action=action)
             if done:

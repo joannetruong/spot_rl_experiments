@@ -5,10 +5,9 @@ import cv2
 import numpy as np
 import rospy
 from sensor_msgs.msg import CompressedImage
+from spot_ros_node import SpotRosSubscriber, decode_ros_blosc
 from spot_wrapper.utils import resize_to_tallest
 from std_msgs.msg import ByteMultiArray
-
-from spot_ros_node import SpotRosSubscriber, decode_ros_blosc
 
 
 class SpotRosVisualizer(SpotRosSubscriber):
@@ -19,7 +18,7 @@ class SpotRosVisualizer(SpotRosSubscriber):
 
     def vis_imgs(self):
         # Skip if no messages were updated
-        if not self.updated:
+        if not self.depth_updated:
             return
 
         # Gather latest images
@@ -37,7 +36,7 @@ class SpotRosVisualizer(SpotRosSubscriber):
         cv2.imshow("ROS Spot Images", img)
         cv2.waitKey(1)
 
-        self.updated = False
+        self.depth_updated = False
         self.fps_buffer.append(1 / (time.time() - self.last_render))
         rospy.loginfo(
             f"{np.mean(self.fps_buffer):.2f} FPS (window size: {len(self.fps_buffer)})"

@@ -83,13 +83,19 @@ class RealPolicy:
 
 
 class NavPolicy(RealPolicy):
-    def __init__(self, checkpoint_path, device):
+    def __init__(self, checkpoint_path, device, sensor_type):
+        if sensor_type == "depth":
+            obs_right_key = "spot_right_depth"
+            obs_left_key = "spot_left_depth"
+        elif sensor_type == "gray":
+            obs_right_key = "spot_right_gray"
+            obs_left_key = "spot_left_gray"
         observation_space = SpaceDict(
             {
-                "spot_left_depth": spaces.Box(
+                obs_left_key: spaces.Box(
                     low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
                 ),
-                "spot_right_depth": spaces.Box(
+                obs_right_key: spaces.Box(
                     low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
                 ),
                 "pointgoal_with_gps_compass": spaces.Box(

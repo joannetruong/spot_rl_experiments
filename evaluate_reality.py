@@ -37,15 +37,6 @@ def main(spot):
     time.sleep(2)
     try:
         while not done:
-            if args.debug:
-                cv2.imwrite(
-                    f"img/left_gray_{env.num_actions}.png",
-                    (observations["spot_left_gray"] * 255).astype(np.uint8),
-                )
-                cv2.imwrite(
-                    f"img/right_gray_{env.num_actions}.png",
-                    (observations["spot_right_gray"] * 255).astype(np.uint8),
-                )
             action = policy.act(observations)
             observations, _, done, _ = env.step(base_action=action)
             if done:

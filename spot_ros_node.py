@@ -7,142 +7,17 @@ import numpy as np
 import rospy
 from cv_bridge import CvBridge
 from sensor_msgs.msg import CompressedImage, Image
-from spot_wrapper.spot import Spot, SpotCamIds, image_response_to_cv2, scale_depth_img
+from spot_wrapper.spot import Spot, image_response_to_cv2, scale_depth_img
 from std_msgs.msg import ByteMultiArray, Float32MultiArray
 
-FRONT_DEPTH_TOPIC = "/spot_cams/filtered_front_depth"
-FRONT_GRAY_TOPIC = "/spot_cams/front_gray"
+RGB_TOPIC = "/camera/color/image_raw/compressed"
+DEPTH_TOPIC = "/camera/aligned_depth_to_color/image_raw/compressed"
 ROBOT_STATE_TOPIC = "/robot_state"
-SRC2MSG = {
-    SpotCamIds.FRONTLEFT_DEPTH: Image,
-    SpotCamIds.FRONTRIGHT_DEPTH: Image,
-    SpotCamIds.FRONTLEFT_FISHEYE: Image,
-    SpotCamIds.FRONTRIGHT_FISHEYE: Image,
-}
-MAX_DEPTH = 3.5
+
+MAX_DEPTH = 10.0
+MIN_DEPTH = 0.3
 FILTER_FRONT_DEPTH = False
 CLAMP_DEPTH = False
-
-
-class SpotRosPublisher:
-    def __init__(self, spot, verbose=False):
-        rospy.init_node("spot_ros_node", disable_signals=True)
-        self.spot = spot
-
-        # For generating Image ROS msgs
-        self.cv_bridge = CvBridge()
-
-        # Instantiate raw image publishers
-        self.sources = list(SRC2MSG.keys())
-        self.img_pubs = [
-            rospy.Publisher(f"/spot_cams/{k}", v, queue_size=1)
-            for k, v in SRC2MSG.items()
-        ]
-
-        # Instantiate filtered image publishers
-        self.use_front_depth = (
-            SpotCamIds.FRONTLEFT_DEPTH in self.sources
-            and SpotCamIds.FRONTRIGHT_DEPTH in self.sources
-        )
-        self.filter_front_depth = FILTER_FRONT_DEPTH
-        if self.use_front_depth:
-            self.filtered_front_depth_pub = rospy.Publisher(
-                FRONT_DEPTH_TOPIC, Image, queue_size=1
-            )
-        self.use_front_gray = (
-            SpotCamIds.FRONTLEFT_FISHEYE in self.sources
-            and SpotCamIds.FRONTRIGHT_FISHEYE in self.sources
-        )
-        if self.use_front_gray:
-            self.front_gray_pub = rospy.Publisher(FRONT_GRAY_TOPIC, Image, queue_size=1)
-        self.last_publish = time.time()
-        self.verbose = verbose
-        rospy.loginfo("[spot_ros_node]: Publishing has started.")
-
-    def publish_msgs(self):
-        st = time.time()
-        image_responses = self.spot.get_image_responses(self.sources, quality=None)
-        retrieval_time = time.time() - st
-        # Publish raw images
-        depth_eyes = {}
-        gray_eyes = {}
-        for pub, src, response in zip(self.img_pubs, self.sources, image_responses):
-            img = image_response_to_cv2(response)
-
-            # Publish filtered front depth images later
-            if (
-                src in [SpotCamIds.FRONTRIGHT_DEPTH, SpotCamIds.FRONTLEFT_DEPTH]
-                and self.use_front_depth
-            ):
-                depth_eyes[src] = img
-
-            if (
-                src in [SpotCamIds.FRONTRIGHT_FISHEYE, SpotCamIds.FRONTLEFT_FISHEYE]
-                and self.use_front_gray
-            ):
-                gray_eyes[src] = img
-        if self.use_front_gray:
-            g_keys = [SpotCamIds.FRONTRIGHT_FISHEYE, SpotCamIds.FRONTLEFT_FISHEYE]
-            gray_merged = np.hstack([gray_eyes[g] for g in g_keys])
-
-            gray_msg = self.cv_bridge.cv2_to_imgmsg(gray_merged)
-            self.front_gray_pub.publish(gray_msg)
-
-        # Filter and publish
-        if self.use_front_depth:
-            # Merge
-            d_keys = [SpotCamIds.FRONTRIGHT_DEPTH, SpotCamIds.FRONTLEFT_DEPTH]
-            depth_merged = np.hstack([depth_eyes[d] for d in d_keys])
-            # Filter
-            if self.filter_front_depth:
-                depth_merged = self.filter_depth(depth_merged, MAX_DEPTH)
-                depth_msg = self.cv_bridge.cv2_to_imgmsg(depth_merged, encoding="mono8")
-            else:
-                depth_msg = self.cv_bridge.cv2_to_imgmsg(
-                    depth_merged, encoding="mono16"
-                )
-            self.filtered_front_depth_pub.publish(depth_msg)
-        if self.verbose:
-            rospy.loginfo(
-                f"[spot_ros_node]: Image retrieval / publish time: "
-                f"{1 / retrieval_time:.4f} / {1 / (time.time() - self.last_publish):.4f} Hz"
-            )
-        self.last_publish = time.time()
-
-    @staticmethod
-    def filter_depth(img, max_depth):
-        img = scale_depth_img(img, max_depth=max_depth)
-        img = np.uint8(img * 255.0)
-        num_iters = 5
-        kernel_size = 19
-        # Blur
-        for _ in range(num_iters):
-            filtered = cv2.medianBlur(img, kernel_size)
-            filtered[img > 0] = img[img > 0]
-            if CLAMP_DEPTH:
-                filtered[filtered < 3.0] = 255
-            img = filtered
-
-        return img
-
-    # @staticmethod
-    # def median_blur(img, kernel_size):
-    #     b, c, h, w = img.size()
-    #
-    #     padding = int((kernel_size - 1) / 2)
-    #
-    #     img_padded = F.pad(img, (padding, padding, padding, padding), mode="replicate")
-    #     img = F.unfold(img_padded, kernel_size).view(b, c, -1, h, w)
-    #
-    #     return torch.median(img, dim=2)[0]
-    #
-    # def median_depth_filter(depth, kernel_size, num_iters):
-    #     for _ in range(num_iters):
-    #         denoised = median_blur(depth, kernel_size)
-    #         depth = torch.where(depth > 0, depth, denoised)
-    #
-    #     return depth
-
 
 class SpotRosSubscriber:
     def __init__(self, node_name):
@@ -153,16 +28,16 @@ class SpotRosSubscriber:
 
         # Instantiate subscribers
         rospy.Subscriber(
-            FRONT_DEPTH_TOPIC,
+            DEPTH_TOPIC,
             Image,
             self.front_depth_callback,
             queue_size=1,
             buff_size=2**24,
         )
         rospy.Subscriber(
-            FRONT_GRAY_TOPIC,
+            RGB_TOPIC,
             Image,
-            self.front_gray_callback,
+            self.front_rgb_callback,
             queue_size=1,
             buff_size=2**24,
         )
@@ -175,22 +50,22 @@ class SpotRosSubscriber:
 
         # Msg holders
         self.front_depth = None
-        self.front_gray = None
+        self.front_rgb = None
         self.x = 0.0
         self.y = 0.0
         self.yaw = 0.0
 
         self.depth_updated = False
-        self.gray_updated = False
+        self.rgb_updated = False
         rospy.loginfo(f"[{node_name}]: Subscribing has started.")
 
     def front_depth_callback(self, msg):
         self.front_depth = msg
         self.depth_updated = True
 
-    def front_gray_callback(self, msg):
-        self.front_gray = msg
-        self.gray_updated = True
+    def front_rgb_callback(self, msg):
+        self.front_rgb = msg
+        self.rgb_updated = True
 
     def robot_state_callback(self, msg):
         self.x, self.y, self.yaw = msg.data[:3]
@@ -199,7 +74,7 @@ class SpotRosSubscriber:
     def front_depth_img(self):
         if self.front_depth is None or not self.depth_updated:
             print("IMAGE IS NONE!")
-            return np.zeros((256, 256, 1), np.uint8)
+            return None
         # Gather latest images
         if isinstance(self.front_depth, ByteMultiArray):
             return decode_ros_blosc(self.front_depth)
@@ -209,17 +84,17 @@ class SpotRosSubscriber:
             return self.cv_bridge.imgmsg_to_cv2(self.front_depth)
 
     @property
-    def front_gray_img(self):
-        if self.front_gray is None or not self.gray_updated:
+    def front_rgb_img(self):
+        if self.front_rgb is None or not self.rgb_updated:
             print("IMAGE IS NONE!")
-            return np.zeros((256, 256, 1), np.uint8)
+            return None
         # Gather latest images
-        if isinstance(self.front_gray, ByteMultiArray):
-            return decode_ros_blosc(self.front_gray)
-        elif isinstance(self.front_gray, CompressedImage):
-            return self.cv_bridge.compressed_imgmsg_to_cv2(self.front_gray)
-        elif isinstance(self.front_gray, Image):
-            return self.cv_bridge.imgmsg_to_cv2(self.front_gray)
+        if isinstance(self.front_rgb, ByteMultiArray):
+            return decode_ros_blosc(self.front_rgb)
+        elif isinstance(self.front_rgb, CompressedImage):
+            return self.cv_bridge.compressed_imgmsg_to_cv2(self.front_rgb)
+        elif isinstance(self.front_rgb, Image):
+            return self.cv_bridge.imgmsg_to_cv2(self.front_rgb)
 
 
 class SpotRosProprioceptionPublisher:

@@ -44,21 +44,17 @@ class SpotNavEnv(SpotBaseEnv):
         observations = {}
         if self.sensor_type == "depth":
             img_obs = self.front_depth_img
-            obs_right_key = "spot_right_depth"
-            obs_left_key = "spot_left_depth"
-        elif self.sensor_type == "gray":
-            img_obs = self.front_gray_img
-            obs_right_key = "spot_right_gray"
-            obs_left_key = "spot_left_gray"
+            obs_key = "depth"
+        elif self.sensor_type == "rgb":
+            img_obs = self.front_rgb_img
+            obs_key = "rgb"
         # Get visual observations
-        front_obs = cv2.resize(img_obs, (256, 256), interpolation=cv2.INTER_AREA)
+        front_obs = cv2.resize(img_obs, (320, 240), interpolation=cv2.INTER_AREA)
         front_obs = np.float32(front_obs) / 255.0
         # Add dimension for channel (unsqueeze)
         front_obs = front_obs.reshape(*front_obs.shape[:2], 1)
 
-        observations[obs_left_key], observations[obs_right_key] = np.split(
-            front_obs, 2, 1
-        )
+        observations[obs_key] = front_obs
 
         # Get rho theta observation
         self.x, self.y, self.yaw = self.spot.get_xy_yaw()

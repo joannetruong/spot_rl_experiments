@@ -1,9 +1,13 @@
+import time
+
 import numpy as np
 import torch
 from gym import spaces
 from gym.spaces import Dict as SpaceDict
 from habitat_baselines.rl.ddppo.policy.resnet_policy import \
     PointNavResNetPolicy
+from habitat_baselines.rl.ddppo.policy.splitnet_policy import \
+    PointNavSplitNetPolicy
 from habitat_baselines.utils.common import batch_obs
 
 
@@ -18,17 +22,21 @@ def to_tensor(v):
 
 
 class RealPolicy:
-    def __init__(self, checkpoint_path, observation_space, action_space, device):
+    def __init__(
+        self, checkpoint_path, observation_space, action_space, device, policy_name
+    ):
         self.device = device
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
+        print("using checkpoint: ", checkpoint_path)
         config = checkpoint["config"]
-
+        if "num_cnns" not in config.RL.POLICY:
+            config.RL.POLICY["num_cnns"] = 1
         """ Disable observation transforms for real world experiments """
         config.defrost()
         config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = []
         config.freeze()
 
-        self.policy = PointNavResNetPolicy.from_config(
+        self.policy = eval(policy_name).from_config(
             config=config,
             observation_space=observation_space,
             action_space=action_space,
@@ -36,10 +44,12 @@ class RealPolicy:
         print("Actor-critic architecture:", self.policy)
         # Move it to the device
         self.policy.to(self.device)
-
         # Load trained weights into the policy
+
+        # If using Splitnet policy, filter out decoder stuff, as it's not used at test-time
         self.policy.load_state_dict(
-            {k[len("actor_critic.") :]: v for k, v in checkpoint["state_dict"].items()}
+            {k[len("actor_critic.") :]: v for k, v in checkpoint["state_dict"].items()},
+            strict=False,
         )
 
         self.prev_actions = None
@@ -66,6 +76,7 @@ class RealPolicy:
         assert self.reset_ran, "You need to call .reset() on the policy first."
         batch = batch_obs([observations], device=self.device)
         with torch.no_grad():
+            start_time = time.time()
             _, actions, _, self.test_recurrent_hidden_states = self.policy.act(
                 batch,
                 self.test_recurrent_hidden_states,
@@ -73,6 +84,8 @@ class RealPolicy:
                 self.not_done_masks,
                 deterministic=True,
             )
+            inf_time = time.time() - start_time
+            print(f"Inference time: {inf_time}")
         self.prev_actions.copy_(actions)
         self.not_done_masks = torch.ones(1, 1, dtype=torch.bool, device=self.device)
 
@@ -83,7 +96,7 @@ class RealPolicy:
 
 
 class NavPolicy(RealPolicy):
-    def __init__(self, checkpoint_path, device, sensor_type):
+    def __init__(self, checkpoint_path, device, sensor_type, policy_name):
         if sensor_type == "depth":
             obs_right_key = "spot_right_depth"
             obs_left_key = "spot_left_depth"
@@ -108,7 +121,9 @@ class NavPolicy(RealPolicy):
         )
         # Linear, angular, and horizontal velocity (in that order)
         action_space = spaces.Box(-1.0, 1.0, (3,))
-        super().__init__(checkpoint_path, observation_space, action_space, device)
+        super().__init__(
+            checkpoint_path, observation_space, action_space, device, policy_name
+        )
 
 
 if __name__ == "__main__":

@@ -51,11 +51,10 @@ class SpotNavEnv(SpotBaseEnv):
             obs_right_key = "spot_right_gray"
             obs_left_key = "spot_left_gray"
         # Get visual observations
-        front_obs = cv2.resize(img_obs, (256, 256), interpolation=cv2.INTER_AREA)
-        front_obs = np.float32(front_obs) / 255.0
+        front_obs = np.float32(img_obs) / 255.0
         # Add dimension for channel (unsqueeze)
-        front_obs = front_obs.reshape(*front_obs.shape[:2], 1)
 
+        front_obs = front_obs.reshape(*front_obs.shape[:2], 1)
         observations[obs_left_key], observations[obs_right_key] = np.split(
             front_obs, 2, 1
         )

@@ -6,8 +6,10 @@ import cv2
 import numpy as np
 import rospy
 from cv_bridge import CvBridge
+from depth_map_utils import fill_in_fast, fill_in_multiscale
 from sensor_msgs.msg import CompressedImage, Image
-from spot_wrapper.spot import Spot, SpotCamIds, image_response_to_cv2, scale_depth_img
+from spot_wrapper.spot import (Spot, SpotCamIds, image_response_to_cv2,
+                               scale_depth_img)
 from std_msgs.msg import ByteMultiArray, Float32MultiArray
 
 FRONT_DEPTH_TOPIC = "/spot_cams/filtered_front_depth"
@@ -46,7 +48,7 @@ class SpotRosPublisher:
         )
         self.filter_front_depth = FILTER_FRONT_DEPTH
         if self.use_front_depth:
-            self.filtered_front_depth_pub = rospy.Publisher(
+            self.front_depth_pub = rospy.Publisher(
                 FRONT_DEPTH_TOPIC, Image, queue_size=1
             )
         self.use_front_gray = (
@@ -92,16 +94,19 @@ class SpotRosPublisher:
         if self.use_front_depth:
             # Merge
             d_keys = [SpotCamIds.FRONTRIGHT_DEPTH, SpotCamIds.FRONTLEFT_DEPTH]
+
             depth_merged = np.hstack([depth_eyes[d] for d in d_keys])
             # Filter
+            depth_merged = scale_depth_img(depth_merged, max_depth=MAX_DEPTH)
+            depth_merged = np.uint8(depth_merged * 255.0)
             if self.filter_front_depth:
                 depth_merged = self.filter_depth(depth_merged, MAX_DEPTH)
-                depth_msg = self.cv_bridge.cv2_to_imgmsg(depth_merged, encoding="mono8")
-            else:
-                depth_msg = self.cv_bridge.cv2_to_imgmsg(
-                    depth_merged, encoding="mono16"
-                )
-            self.filtered_front_depth_pub.publish(depth_msg)
+            depth_merged = cv2.resize(
+                depth_merged, (256, 256), interpolation=cv2.INTER_AREA
+            )
+            depth_msg = self.cv_bridge.cv2_to_imgmsg(depth_merged, encoding="mono8")
+
+            self.front_depth_pub.publish(depth_msg)
         if self.verbose:
             rospy.loginfo(
                 f"[spot_ros_node]: Image retrieval / publish time: "
@@ -111,37 +116,27 @@ class SpotRosPublisher:
 
     @staticmethod
     def filter_depth(img, max_depth):
-        img = scale_depth_img(img, max_depth=max_depth)
-        img = np.uint8(img * 255.0)
-        num_iters = 5
-        kernel_size = 19
+        img = (
+            fill_in_multiscale(img.copy().astype(np.float32) * (max_depth / 255.0))[0]
+            * (255.0 / max_depth)
+        ).astype(np.uint8)
+        if CLAMP_DEPTH:
+            img[img < 3.0] = 255.0
+        return img
+
+    @staticmethod
+    def median_filter_depth(img):
+        num_iters = 10
+        kernel_size = 9
         # Blur
         for _ in range(num_iters):
             filtered = cv2.medianBlur(img, kernel_size)
             filtered[img > 0] = img[img > 0]
             if CLAMP_DEPTH:
-                filtered[filtered < 3.0] = 255
+                filtered[filtered < 3.0] = 255.0
             img = filtered
 
         return img
-
-    # @staticmethod
-    # def median_blur(img, kernel_size):
-    #     b, c, h, w = img.size()
-    #
-    #     padding = int((kernel_size - 1) / 2)
-    #
-    #     img_padded = F.pad(img, (padding, padding, padding, padding), mode="replicate")
-    #     img = F.unfold(img_padded, kernel_size).view(b, c, -1, h, w)
-    #
-    #     return torch.median(img, dim=2)[0]
-    #
-    # def median_depth_filter(depth, kernel_size, num_iters):
-    #     for _ in range(num_iters):
-    #         denoised = median_blur(depth, kernel_size)
-    #         depth = torch.where(depth > 0, depth, denoised)
-    #
-    #     return depth
 
 
 class SpotRosSubscriber:
@@ -199,7 +194,7 @@ class SpotRosSubscriber:
     def front_depth_img(self):
         if self.front_depth is None or not self.depth_updated:
             print("IMAGE IS NONE!")
-            return np.zeros((256, 256, 1), np.uint8)
+            return None
         # Gather latest images
         if isinstance(self.front_depth, ByteMultiArray):
             return decode_ros_blosc(self.front_depth)
@@ -212,7 +207,7 @@ class SpotRosSubscriber:
     def front_gray_img(self):
         if self.front_gray is None or not self.gray_updated:
             print("IMAGE IS NONE!")
-            return np.zeros((256, 256, 1), np.uint8)
+            return None
         # Gather latest images
         if isinstance(self.front_gray, ByteMultiArray):
             return decode_ros_blosc(self.front_gray)

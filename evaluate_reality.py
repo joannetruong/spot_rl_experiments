@@ -11,7 +11,8 @@ from real_policy import NavPolicy
 from spot_wrapper.spot import Spot
 
 NAV_WEIGHTS = "weights/spot_cam_kinematic_hm3d_gibson_ckpt_27.pth"
-SENSOR_TYPE = "depth"
+SENSOR_TYPE = "depth"  # depth or gray
+POLICY_NAME = "PointNavResNetPolicy"  # PointNavSplitNetPolicy or PointNavResNetPolicy
 GOAL_XY = [1, 0]  # Local coordinates
 GOAL_AS_STR = ",".join([str(i) for i in GOAL_XY])
 
@@ -21,17 +22,19 @@ def main(spot):
     parser.add_argument("-g", "--goal", default=GOAL_AS_STR)
     parser.add_argument("-w", "--weights", default=NAV_WEIGHTS)
     parser.add_argument("-s", "--sensor-type", default=SENSOR_TYPE)
+    parser.add_argument("-p", "--policy-name", default=POLICY_NAME)
     parser.add_argument("-d", "--debug", action="store_true")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    policy = NavPolicy(args.weights, device, args.sensor_type)
+    policy = NavPolicy(args.weights, device, args.sensor_type, args.policy_name)
     policy.reset()
 
     env = SpotNavEnv(spot)
     env.sensor_type = args.sensor_type
     goal_x, goal_y = [float(i) for i in args.goal.split(",")]
     print(f"NAVIGATING TO X: {goal_x}m, Y: {goal_y}m")
+    time.sleep(2)
     observations = env.reset([goal_x, goal_y])
     done = False
     time.sleep(2)
@@ -39,12 +42,12 @@ def main(spot):
         while not done:
             if args.debug:
                 cv2.imwrite(
-                    f"img/left_gray_{env.num_actions}.png",
-                    (observations["spot_left_gray"] * 255).astype(np.uint8),
+                    f"img/left_depth_{env.num_actions}.png",
+                    (observations["spot_left_depth"] * 255),
                 )
                 cv2.imwrite(
-                    f"img/right_gray_{env.num_actions}.png",
-                    (observations["spot_right_gray"] * 255).astype(np.uint8),
+                    f"img/right_depth_{env.num_actions}.png",
+                    (observations["spot_right_depth"] * 255),
                 )
             action = policy.act(observations)
             observations, _, done, _ = env.step(base_action=action)

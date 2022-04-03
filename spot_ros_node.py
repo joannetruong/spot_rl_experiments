@@ -8,23 +8,17 @@ import rospy
 from cv_bridge import CvBridge
 from depth_map_utils import fill_in_fast, fill_in_multiscale
 from sensor_msgs.msg import CompressedImage, Image
-from spot_wrapper.spot import (Spot, SpotCamIds, image_response_to_cv2,
-                               scale_depth_img)
+from spot_wrapper.spot import Spot, image_response_to_cv2, scale_depth_img
 from std_msgs.msg import ByteMultiArray, Float32MultiArray
 
-FRONT_DEPTH_TOPIC = "/spot_cams/filtered_front_depth"
-FRONT_GRAY_TOPIC = "/spot_cams/front_gray"
+RGB_TOPIC = "/camera/color/image_raw/compressed"
+DEPTH_TOPIC = "/camera/aligned_depth_to_color/image_raw/compressed"
 ROBOT_STATE_TOPIC = "/robot_state"
-SRC2MSG = {
-    SpotCamIds.FRONTLEFT_DEPTH: Image,
-    SpotCamIds.FRONTRIGHT_DEPTH: Image,
-    SpotCamIds.FRONTLEFT_FISHEYE: Image,
-    SpotCamIds.FRONTRIGHT_FISHEYE: Image,
-}
-MAX_DEPTH = 3.5
+
+MAX_DEPTH = 10.0
+MIN_DEPTH = 0.3
 FILTER_FRONT_DEPTH = False
 CLAMP_DEPTH = False
-
 
 class SpotRosPublisher:
     def __init__(self, spot, verbose=False):
@@ -138,7 +132,6 @@ class SpotRosPublisher:
 
         return img
 
-
 class SpotRosSubscriber:
     def __init__(self, node_name):
         rospy.init_node(node_name, disable_signals=True)
@@ -148,16 +141,16 @@ class SpotRosSubscriber:
 
         # Instantiate subscribers
         rospy.Subscriber(
-            FRONT_DEPTH_TOPIC,
+            DEPTH_TOPIC,
             Image,
             self.front_depth_callback,
             queue_size=1,
             buff_size=2**24,
         )
         rospy.Subscriber(
-            FRONT_GRAY_TOPIC,
+            RGB_TOPIC,
             Image,
-            self.front_gray_callback,
+            self.front_rgb_callback,
             queue_size=1,
             buff_size=2**24,
         )
@@ -170,22 +163,22 @@ class SpotRosSubscriber:
 
         # Msg holders
         self.front_depth = None
-        self.front_gray = None
+        self.front_rgb = None
         self.x = 0.0
         self.y = 0.0
         self.yaw = 0.0
 
         self.depth_updated = False
-        self.gray_updated = False
+        self.rgb_updated = False
         rospy.loginfo(f"[{node_name}]: Subscribing has started.")
 
     def front_depth_callback(self, msg):
         self.front_depth = msg
         self.depth_updated = True
 
-    def front_gray_callback(self, msg):
-        self.front_gray = msg
-        self.gray_updated = True
+    def front_rgb_callback(self, msg):
+        self.front_rgb = msg
+        self.rgb_updated = True
 
     def robot_state_callback(self, msg):
         self.x, self.y, self.yaw = msg.data[:3]
@@ -204,17 +197,17 @@ class SpotRosSubscriber:
             return self.cv_bridge.imgmsg_to_cv2(self.front_depth)
 
     @property
-    def front_gray_img(self):
-        if self.front_gray is None or not self.gray_updated:
+    def front_rgb_img(self):
+        if self.front_rgb is None or not self.rgb_updated:
             print("IMAGE IS NONE!")
             return None
         # Gather latest images
-        if isinstance(self.front_gray, ByteMultiArray):
-            return decode_ros_blosc(self.front_gray)
-        elif isinstance(self.front_gray, CompressedImage):
-            return self.cv_bridge.compressed_imgmsg_to_cv2(self.front_gray)
-        elif isinstance(self.front_gray, Image):
-            return self.cv_bridge.imgmsg_to_cv2(self.front_gray)
+        if isinstance(self.front_rgb, ByteMultiArray):
+            return decode_ros_blosc(self.front_rgb)
+        elif isinstance(self.front_rgb, CompressedImage):
+            return self.cv_bridge.compressed_imgmsg_to_cv2(self.front_rgb)
+        elif isinstance(self.front_rgb, Image):
+            return self.cv_bridge.imgmsg_to_cv2(self.front_rgb)
 
 
 class SpotRosProprioceptionPublisher:

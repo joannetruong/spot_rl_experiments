@@ -49,11 +49,7 @@ class SpotNavEnv(SpotBaseEnv):
             img_obs = self.front_rgb_img
             obs_key = "rgb"
         # Get visual observations
-        front_obs = cv2.resize(img_obs, (320, 240), interpolation=cv2.INTER_AREA)
         front_obs = np.float32(front_obs) / 255.0
-        # Add dimension for channel (unsqueeze)
-        front_obs = front_obs.reshape(*front_obs.shape[:2], 1)
-
         observations[obs_key] = front_obs
 
         # Get rho theta observation

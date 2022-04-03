@@ -22,8 +22,8 @@ SRC2MSG = {
     SpotCamIds.FRONTRIGHT_FISHEYE: Image,
 }
 MAX_DEPTH = 3.5
-FILTER_FRONT_DEPTH = False
-CLAMP_DEPTH = False
+FILTER_FRONT_DEPTH = True
+CLAMP_DEPTH = True
 
 
 class SpotRosPublisher:

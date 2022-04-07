@@ -116,13 +116,16 @@ class SpotRosPublisher:
 
     @staticmethod
     def filter_depth(img, max_depth):
-        img = (
-            fill_in_multiscale(img.copy().astype(np.float32) * (max_depth / 255.0))[0]
+        filtered_depth_img = (
+            fill_in_multiscale(img.astype(np.float32) * (max_depth / 255.0))[0]
             * (255.0 / max_depth)
         ).astype(np.uint8)
+        # Recover pixels that weren't black before but were turned black by filtering
+        recovery_pixels = np.logical_and(img != 0, filtered_depth_img == 0)
+        filtered_depth_img[recovery_pixels] = img[recovery_pixels]
         if CLAMP_DEPTH:
-            img[img < 3.0] = 255.0
-        return img
+            filtered_depth_img[filtered_depth_img == 0] = 255
+        return filtered_depth_img
 
     @staticmethod
     def median_filter_depth(img):

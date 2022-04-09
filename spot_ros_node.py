@@ -1,7 +1,6 @@
 import argparse
 import time
 
-import blosc
 import cv2
 import numpy as np
 import rospy
@@ -16,9 +15,10 @@ DEPTH_TOPIC = "/camera/aligned_depth_to_color/image_raw/compressed"
 ROBOT_STATE_TOPIC = "/robot_state"
 
 MAX_DEPTH = 10.0
-MIN_DEPTH = 0.3
-FILTER_FRONT_DEPTH = False
-CLAMP_DEPTH = False
+MIN_DEPTH = 0.0
+FILTER_FRONT_DEPTH = True
+CLAMP_DEPTH = True
+
 
 class SpotRosPublisher:
     def __init__(self, spot, verbose=False):
@@ -131,6 +131,7 @@ class SpotRosPublisher:
             img = filtered
 
         return img
+
 
 class SpotRosSubscriber:
     def __init__(self, node_name):

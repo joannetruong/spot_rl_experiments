@@ -42,15 +42,12 @@ class SpotNavEnv(SpotBaseEnv):
 
     def get_nav_observation(self, goal_xy):
         observations = {}
-        if self.sensor_type == "depth":
-            img_obs = self.front_depth_img
-            obs_key = "depth"
-        elif self.sensor_type == "rgb":
-            img_obs = self.front_rgb_img
-            obs_key = "rgb"
+        img_obs = self.front_depth_img
+
         # Get visual observations
-        front_obs = np.float32(front_obs) / 255.0
-        observations[obs_key] = front_obs
+        front_obs = np.float32(img_obs) / 255.0
+        front_obs = front_obs.reshape(*front_obs.shape[:2], 1)
+        observations["depth"] = front_obs
 
         # Get rho theta observation
         self.x, self.y, self.yaw = self.spot.get_xy_yaw()

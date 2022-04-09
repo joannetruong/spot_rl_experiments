@@ -21,17 +21,14 @@ def main(spot):
     parser = argparse.ArgumentParser()
     parser.add_argument("-g", "--goal", default=GOAL_AS_STR)
     parser.add_argument("-w", "--weights", default=NAV_WEIGHTS)
-    parser.add_argument("-s", "--sensor-type", default=SENSOR_TYPE)
-    parser.add_argument("-p", "--policy-name", default=POLICY_NAME)
     parser.add_argument("-d", "--debug", action="store_true")
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    policy = NavPolicy(args.weights, device, args.sensor_type, args.policy_name)
+    policy = NavPolicy(args.weights, device)
     policy.reset()
 
     env = SpotNavEnv(spot)
-    env.sensor_type = args.sensor_type
     goal_x, goal_y = [float(i) for i in args.goal.split(",")]
     print(f"NAVIGATING TO X: {goal_x}m, Y: {goal_y}m")
     time.sleep(2)

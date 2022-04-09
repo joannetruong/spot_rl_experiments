@@ -6,8 +6,6 @@ from gym import spaces
 from gym.spaces import Dict as SpaceDict
 from habitat_baselines.rl.ddppo.policy.resnet_policy import \
     PointNavResNetPolicy
-from habitat_baselines.rl.ddppo.policy.splitnet_policy import \
-    PointNavSplitNetPolicy
 from habitat_baselines.utils.common import batch_obs
 
 
@@ -22,9 +20,7 @@ def to_tensor(v):
 
 
 class RealPolicy:
-    def __init__(
-        self, checkpoint_path, observation_space, action_space, device, policy_name
-    ):
+    def __init__(self, checkpoint_path, observation_space, action_space, device):
         self.device = device
         checkpoint = torch.load(checkpoint_path, map_location="cpu")
         print("using checkpoint: ", checkpoint_path)
@@ -36,7 +32,7 @@ class RealPolicy:
         config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = []
         config.freeze()
 
-        self.policy = eval(policy_name).from_config(
+        self.policy = PointNavResNetPolicy.from_config(
             config=config,
             observation_space=observation_space,
             action_space=action_space,
@@ -96,20 +92,11 @@ class RealPolicy:
 
 
 class NavPolicy(RealPolicy):
-    def __init__(self, checkpoint_path, device, sensor_type, policy_name):
-        if sensor_type == "depth":
-            obs_right_key = "spot_right_depth"
-            obs_left_key = "spot_left_depth"
-        elif sensor_type == "gray":
-            obs_right_key = "spot_right_gray"
-            obs_left_key = "spot_left_gray"
+    def __init__(self, checkpoint_path, device):
         observation_space = SpaceDict(
             {
-                obs_left_key: spaces.Box(
-                    low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
-                ),
-                obs_right_key: spaces.Box(
-                    low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
+                "depth": spaces.Box(
+                    low=0.0, high=1.0, shape=(320, 240, 1), dtype=np.float32
                 ),
                 "pointgoal_with_gps_compass": spaces.Box(
                     low=np.finfo(np.float32).min,
@@ -121,9 +108,7 @@ class NavPolicy(RealPolicy):
         )
         # Linear, angular, and horizontal velocity (in that order)
         action_space = spaces.Box(-1.0, 1.0, (3,))
-        super().__init__(
-            checkpoint_path, observation_space, action_space, device, policy_name
-        )
+        super().__init__(checkpoint_path, observation_space, action_space, device)
 
 
 if __name__ == "__main__":
@@ -133,8 +118,7 @@ if __name__ == "__main__":
     )
     nav_policy.reset()
     observations = {
-        "spot_left_depth": np.zeros([256, 128, 1], dtype=np.float32),
-        "spot_right_depth": np.zeros([256, 128, 1], dtype=np.float32),
+        "spot_depth": np.zeros([320, 240, 1], dtype=np.float32),
         "pointgoal_with_gps_compass": np.zeros(2, dtype=np.float32),
     }
     actions = nav_policy.act(observations)

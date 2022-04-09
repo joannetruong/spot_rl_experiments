@@ -38,6 +38,8 @@ class SpotNavEnv(SpotBaseEnv):
             f"x: {self.x:.2f}\t"
             f"y: {self.y:.2f}\t"
             f"yaw: {np.rad2deg(self.yaw):.2f}\t"
+            f"# actions: {self.num_actions}\t"
+            f"# collisions: {self.num_collisions}\t"
         )
 
     def get_nav_observation(self, goal_xy):
@@ -88,4 +90,5 @@ class SpotNavEnv(SpotBaseEnv):
         curr_xy = np.array([self.x, self.y], dtype=np.float32)
         self.episode_distance += np.linalg.norm(curr_xy - prev_xy)
         self.num_actions += 1
+        self.num_collisions += self.collided
         return observations, reward, done, info

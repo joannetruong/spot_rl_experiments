@@ -10,7 +10,8 @@ MAX_EPISODE_STEPS = 200
 
 # Base action params
 MAX_LIN_VEL = 0.5  # m/s
-MAX_ANG_VEL = 0.3  # 17.19 degrees/s, in radians
+MAX_ANG_VEL = 0.52  # 30.0 degrees/s, in radians
+# MAX_ANG_VEL = 0.7  # 30.0 degrees/s, in radians
 VEL_TIME = 1 / CTRL_HZ
 
 

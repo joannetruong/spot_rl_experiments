@@ -85,7 +85,6 @@ class RealPolicy:
                 deterministic=True,
             )
             inf_time = time.time() - start_time
-            print(f"Inference time: {inf_time}")
         self.prev_actions.copy_(actions)
         self.not_done_masks = torch.ones(1, 1, dtype=torch.bool, device=self.device)
 

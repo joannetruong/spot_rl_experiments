@@ -49,6 +49,7 @@ class RealPolicy:
         # If using Splitnet policy, filter out decoder stuff, as it's not used at test-time
         self.policy.load_state_dict(
             {k[len("actor_critic.") :]: v for k, v in checkpoint["state_dict"].items()},
+            # strict=True,
             strict=False,
         )
 
@@ -85,6 +86,7 @@ class RealPolicy:
                 deterministic=True,
             )
             inf_time = time.time() - start_time
+            print(f"Inference time: {inf_time}")
         self.prev_actions.copy_(actions)
         self.not_done_masks = torch.ones(1, 1, dtype=torch.bool, device=self.device)
 

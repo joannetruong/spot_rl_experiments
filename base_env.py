@@ -11,8 +11,9 @@ MAX_EPISODE_STEPS = 200
 # Base action params
 MAX_LIN_VEL = 0.5  # m/s
 MAX_ANG_VEL = 0.52  # 30.0 degrees/s, in radians
-# MAX_ANG_VEL = 0.7  # 30.0 degrees/s, in radians
+# MAX_ANG_VEL = 0.7  # 40.0 degrees/s, in radians
 VEL_TIME = 1 / CTRL_HZ
+USE_KEYBOARD = False
 
 
 class SpotBaseEnv(SpotRosSubscriber, gym.Env):
@@ -62,31 +63,18 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
             # Command velocities using the input action
             x_vel, ang_vel, y_vel = base_action
 
-            x_vel = np.clip(x_vel, -1, 1)
-            ang_vel = np.clip(ang_vel, -1, 1)
-            y_vel = np.clip(y_vel, -1, 1)
-
-            x_vel = (x_vel + 1.0) / 2.0
-            ang_vel = (ang_vel + 1.0) / 2.0
-            y_vel = (y_vel + 1.0) / 2.0
-
-            # Scale actions
-            x_vel = -self.max_lin_vel + x_vel * 2 * self.max_lin_vel
-            ang_vel = -self.max_ang_vel + ang_vel * 2 * self.max_ang_vel
-            y_vel = -self.max_lin_vel + y_vel * 2 * self.max_lin_vel
-
-            # x_vel = np.clip(x_vel, -1, 1) * self.max_lin_vel
-            # y_vel = np.clip(y_vel, -1, 1) * self.max_lin_vel
-            # ang_vel = np.clip(ang_vel, -1, 1) * self.max_ang_vel
+            x_vel = np.clip(x_vel, -1, 1) * self.max_lin_vel
+            y_vel = np.clip(y_vel, -1, 1) * self.max_lin_vel
+            ang_vel = np.clip(ang_vel, -1, 1) * self.max_ang_vel
             # Spot-real's horizontal velocity is flipped from Habitat's convention
-            print(f"STEPPING! Vx: {x_vel}, Vy: {y_vel}, Vt: {ang_vel}")
+            print(f"STEPPING! Vx: {x_vel}, Vy: {y_vel}, Vt: {np.rad2deg(ang_vel)}")
             self.spot.set_base_velocity(x_vel, y_vel, ang_vel, self.vel_time)
-
-            # key = input("Press key to continue\n")
-            # if key == "q":
-            #     return
-            # else:
-            #     self.spot.set_base_velocity(x_vel, -y_vel, ang_vel, self.vel_time)
+            if USE_KEYBOARD:
+                key = input("Press key to continue\n")
+                if key == "q":
+                    return
+                else:
+                    self.spot.set_base_velocity(x_vel, y_vel, ang_vel, self.vel_time)
 
         # Pause until enough time has passed during this step
         while time.time() < self.last_execution + 1 / self.ctrl_hz:

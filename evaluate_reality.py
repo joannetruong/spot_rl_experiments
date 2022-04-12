@@ -17,15 +17,7 @@ GOAL_XY = [1, 0]  # Local coordinates
 GOAL_AS_STR = ",".join([str(i) for i in GOAL_XY])
 
 
-def main(spot):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-g", "--goal", default=GOAL_AS_STR)
-    parser.add_argument("-w", "--weights", default=NAV_WEIGHTS)
-    parser.add_argument("-s", "--sensor-type", default=SENSOR_TYPE)
-    parser.add_argument("-p", "--policy-name", default=POLICY_NAME)
-    parser.add_argument("-d", "--debug", action="store_true")
-    args = parser.parse_args()
-
+def main(spot, args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     policy = NavPolicy(args.weights, device, args.sensor_type, args.policy_name)
     policy.reset()
@@ -68,6 +60,15 @@ def main(spot):
 
 
 if __name__ == "__main__":
-    spot = Spot("RealNavEnv")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-g", "--goal", default=GOAL_AS_STR)
+    parser.add_argument("-w", "--weights", default=NAV_WEIGHTS)
+    parser.add_argument("-s", "--sensor-type", default=SENSOR_TYPE)
+    parser.add_argument("-p", "--policy-name", default=POLICY_NAME)
+    parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("--disable-obstacle-avoidance", action="store_true")
+    args = parser.parse_args()
+
+    spot = Spot("RealNavEnv", args.disable_obstacle_avoidance)
     with spot.get_lease(hijack=True):
-        main(spot)
+        main(spot, args)

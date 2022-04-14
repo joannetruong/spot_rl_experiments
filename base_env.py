@@ -78,7 +78,7 @@ class SpotBaseEnv(ExternalRosSubscriber, gym.Env):
             # y_vel = np.clip(y_vel, -1, 1) * self.max_lin_vel
             # ang_vel = np.clip(ang_vel, -1, 1) * self.max_ang_vel
             # Spot-real's horizontal velocity is flipped from Habitat's convention
-            print(f"STEPPING! Vx: {x_vel}, Vy: {-y_vel}, Vt: {ang_vel}")
+            print(f"STEPPING! Vx: {x_vel}, Vy: {-y_vel}, Vt: {np.rad2deg(ang_vel)}")
             self.spot.set_base_velocity(x_vel, -y_vel, ang_vel, self.vel_time)
 
             # key = input("Press key to continue\n")

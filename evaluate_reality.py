@@ -19,13 +19,19 @@ GOAL_AS_STR = ",".join([str(i) for i in GOAL_XY])
 
 def main(spot, args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    policy = NavPolicy(args.weights, device, args.sensor_type, args.policy_name)
+    action_dim = 3
+    if args.no_horizontal_velocity:
+        action_dim = 2
+    policy = NavPolicy(
+        args.weights, device, args.sensor_type, args.policy_name, action_dim
+    )
     policy.reset()
 
-    env = SpotNavEnv(spot)
+    env = SpotNavEnv(spot, action_dim)
     env.sensor_type = args.sensor_type
     goal_x, goal_y = [float(i) for i in args.goal.split(",")]
     print(f"NAVIGATING TO X: {goal_x}m, Y: {goal_y}m")
+    print("curr pose: ", spot.get_xy_yaw())
     time.sleep(2)
     observations = env.reset([goal_x, goal_y])
     done = False
@@ -66,6 +72,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--sensor-type", default=SENSOR_TYPE)
     parser.add_argument("-p", "--policy-name", default=POLICY_NAME)
     parser.add_argument("-d", "--debug", action="store_true")
+    parser.add_argument("-nhy", "--no-horizontal-velocity", action="store_true")
     parser.add_argument("--disable-obstacle-avoidance", action="store_true")
     args = parser.parse_args()
 

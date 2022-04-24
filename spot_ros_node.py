@@ -9,7 +9,8 @@ from cv_bridge import CvBridge
 from depth_map_utils import fill_in_fast, fill_in_multiscale
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from sensor_msgs.msg import CompressedImage, Image
-from spot_wrapper.spot import Spot, SpotCamIds, image_response_to_cv2, scale_depth_img
+from spot_wrapper.spot import (Spot, SpotCamIds, image_response_to_cv2,
+                               scale_depth_img)
 from std_msgs.msg import ByteMultiArray, Float32, Float32MultiArray
 
 FRONT_DEPTH_TOPIC = "/spot_cams/filtered_front_depth"
@@ -315,20 +316,22 @@ class SpotRosSubscriber:
     @property
     def front_depth_img(self):
         if self.front_depth is None or not self.front_depth_updated:
-            print("IMAGE IS NONE!")
+            print("DEPTH IMAGE IS NONE!")
             return None
+        self.front_depth_updated = False
         return self.ros_to_img(self.front_depth)
 
     @property
     def collided(self):
         if not self.collision_updated:
             return 0.0
+        self.collision_updated = False
         return self.collision
 
     @property
     def front_gray_img(self):
         if self.front_gray is None or not self.gray_updated:
-            print("IMAGE IS NONE!")
+            print("GRAY IMAGE IS NONE!")
             return None
         return self.ros_to_img(self.front_gray)
 

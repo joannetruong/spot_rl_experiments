@@ -7,13 +7,17 @@ SUCCESS_DISTANCE = 0.425
 
 
 class SpotNavEnv(SpotBaseEnv):
-    def __init__(self, spot: Spot):
+    def __init__(self, spot: Spot, action_dim):
         super().__init__(spot)
         self.goal_xy = None
         self.succ_distance = SUCCESS_DISTANCE
+        self.no_horizontal_vel = False
+        if action_dim == 2:
+            self.no_horizontal_vel = True
 
     def reset(self, goal_xy):
         self.spot.home_robot()
+        print("Reset! Curr pose: ", self.spot.get_xy_yaw())
         self.goal_xy = np.array(goal_xy, dtype=np.float32)
         self.num_actions = 0
         self.num_collisions = 0
@@ -57,10 +61,9 @@ class SpotNavEnv(SpotBaseEnv):
         # Add dimension for channel (unsqueeze)
 
         front_obs = front_obs.reshape(*front_obs.shape[:2], 1)
-        observations[obs_left_key], observations[obs_right_key] = np.split(
+        observations[obs_right_key], observations[obs_left_key] = np.split(
             front_obs, 2, 1
         )
-
         # Get rho theta observation
         self.x, self.y, self.yaw = self.spot.get_xy_yaw()
         curr_xy = np.array([self.x, self.y], dtype=np.float32)

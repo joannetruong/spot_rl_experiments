@@ -8,6 +8,7 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import \
     PointNavResNetPolicy
 from habitat_baselines.rl.ddppo.policy.splitnet_policy import \
     PointNavSplitNetPolicy
+from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy
 from habitat_baselines.utils.common import batch_obs
 
 
@@ -35,7 +36,6 @@ class RealPolicy:
         config.defrost()
         config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = []
         config.freeze()
-
         self.policy = eval(policy_name).from_config(
             config=config,
             observation_space=observation_space,
@@ -97,7 +97,7 @@ class RealPolicy:
 
 
 class NavPolicy(RealPolicy):
-    def __init__(self, checkpoint_path, device, sensor_type, policy_name):
+    def __init__(self, checkpoint_path, device, sensor_type, policy_name, action_dim):
         if sensor_type == "depth":
             obs_right_key = "spot_right_depth"
             obs_left_key = "spot_left_depth"
@@ -121,7 +121,7 @@ class NavPolicy(RealPolicy):
             }
         )
         # Linear, angular, and horizontal velocity (in that order)
-        action_space = spaces.Box(-1.0, 1.0, (3,))
+        action_space = spaces.Box(-1.0, 1.0, (action_dim,))
         super().__init__(
             checkpoint_path, observation_space, action_space, device, policy_name
         )

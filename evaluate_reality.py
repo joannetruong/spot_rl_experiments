@@ -4,32 +4,28 @@ import argparse
 import time
 
 import cv2
+import hydra
 import numpy as np
 import torch.cuda
 from nav_env import SpotNavEnv
+from omegaconf import OmegaConf
 from real_policy import NavPolicy
 from spot_wrapper.spot import Spot
 
-NAV_WEIGHTS = "weights/spot_cam_kinematic_hm3d_gibson_ckpt_27.pth"
-SENSOR_TYPE = "depth"  # depth or gray
-POLICY_NAME = "PointNavResNetPolicy"  # PointNavSplitNetPolicy or PointNavResNetPolicy
-GOAL_XY = [1, 0]  # Local coordinates
-GOAL_AS_STR = ",".join([str(i) for i in GOAL_XY])
 
-
-def main(spot, args):
+@hydra.main(config_path="config", config_name="base_config")
+def main(cfg):
+    print("Config parameters: ")
+    print(OmegaConf.to_yaml(cfg))
+    spot = Spot("RealNavEnv", cfg.disable_obstacle_avoidance)
+    spot.get_lease(hijack=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    action_dim = 3
-    if args.no_horizontal_velocity:
-        action_dim = 2
-    policy = NavPolicy(
-        args.weights, device, args.sensor_type, args.policy_name, action_dim
-    )
+    policy = NavPolicy(cfg, device)
     policy.reset()
 
-    env = SpotNavEnv(spot, action_dim)
-    env.sensor_type = args.sensor_type
-    goal_x, goal_y = [float(i) for i in args.goal.split(",")]
+    env = SpotNavEnv(spot, cfg)
+    env.sensor_type = cfg.sensor_type
+    goal_x, goal_y = cfg.goal_x, cfg.goal_y
     print(f"NAVIGATING TO X: {goal_x}m, Y: {goal_y}m")
     print("curr pose: ", spot.get_xy_yaw())
     time.sleep(2)
@@ -38,7 +34,7 @@ def main(spot, args):
     time.sleep(2)
     try:
         while not done:
-            if args.debug:
+            if cfg.debug:
                 cv2.imwrite(
                     f"img/left_depth_{env.num_actions}.png",
                     (observations["spot_left_depth"] * 255),
@@ -66,16 +62,4 @@ def main(spot, args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-g", "--goal", default=GOAL_AS_STR)
-    parser.add_argument("-w", "--weights", default=NAV_WEIGHTS)
-    parser.add_argument("-s", "--sensor-type", default=SENSOR_TYPE)
-    parser.add_argument("-p", "--policy-name", default=POLICY_NAME)
-    parser.add_argument("-d", "--debug", action="store_true")
-    parser.add_argument("-nhy", "--no-horizontal-velocity", action="store_true")
-    parser.add_argument("--disable-obstacle-avoidance", action="store_true")
-    args = parser.parse_args()
-
-    spot = Spot("RealNavEnv", args.disable_obstacle_avoidance)
-    with spot.get_lease(hijack=True):
-        main(spot, args)
+    main()

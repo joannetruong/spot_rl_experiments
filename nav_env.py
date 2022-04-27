@@ -3,17 +3,13 @@ import numpy as np
 from base_env import SpotBaseEnv
 from spot_wrapper.spot import Spot, wrap_heading
 
-SUCCESS_DISTANCE = 0.425
-
 
 class SpotNavEnv(SpotBaseEnv):
-    def __init__(self, spot: Spot, action_dim):
-        super().__init__(spot)
+    def __init__(self, spot: Spot, cfg):
+        super().__init__(spot, cfg)
         self.goal_xy = None
-        self.succ_distance = SUCCESS_DISTANCE
-        self.no_horizontal_vel = False
-        if action_dim == 2:
-            self.no_horizontal_vel = True
+        self.succ_distance = cfg.success_dist
+        self.use_horizontal_vel = cfg.use_horizontal_velocity
 
     def reset(self, goal_xy):
         self.spot.home_robot()

@@ -1,0 +1,35 @@
+defaults:
+  - _self_
+  - override hydra/hydra_logging: disabled
+  - override hydra/job_logging: disabled
+
+# Disable obstacle avoidance
+disable_obstacle_avoidance: True
+
+# Goal, specified relative to Spot
+goal_x: 4.0
+goal_y: 0.0
+
+# Policy configs
+weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_sd_1_ckpt_45.pth
+sensor_type: depth
+policy_name: PointNavBaselinePolicy
+use_horizontal_velocity: False
+
+# Control configs
+ctrl_hz: 2
+max_lin_dist: 0.25 # m/s
+max_ang_dist: 0.26 # rad/s
+
+# Success criteria
+success_dist: 0.425
+max_episode_steps: 500
+
+# Debug mode
+debug: False # saves images to disk
+use_keyboard: False # wait for keyboard input before stepping robot
+
+hydra:
+  output_subdir: null
+  run:
+    dir: .

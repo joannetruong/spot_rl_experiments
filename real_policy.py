@@ -1,3 +1,4 @@
+import os.path
 import time
 
 import numpy as np
@@ -23,12 +24,11 @@ def to_tensor(v):
 
 
 class RealPolicy:
-    def __init__(
-        self, checkpoint_path, observation_space, action_space, device, policy_name
-    ):
+    def __init__(self, cfg, observation_space, action_space, device):
         self.device = device
-        checkpoint = torch.load(checkpoint_path, map_location="cpu")
-        print("using checkpoint: ", checkpoint_path)
+        print(os.path.abspath(cfg.weights))
+        checkpoint = torch.load(cfg.weights, map_location="cpu")
+        print("using checkpoint: ", cfg.weights)
         config = checkpoint["config"]
         if "num_cnns" not in config.RL.POLICY:
             config.RL.POLICY["num_cnns"] = 1
@@ -36,7 +36,7 @@ class RealPolicy:
         config.defrost()
         config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = []
         config.freeze()
-        self.policy = eval(policy_name).from_config(
+        self.policy = eval(cfg.policy_name).from_config(
             config=config,
             observation_space=observation_space,
             action_space=action_space,
@@ -97,11 +97,11 @@ class RealPolicy:
 
 
 class NavPolicy(RealPolicy):
-    def __init__(self, checkpoint_path, device, sensor_type, policy_name, action_dim):
-        if sensor_type == "depth":
+    def __init__(self, cfg, device):
+        if cfg.sensor_type == "depth":
             obs_right_key = "spot_right_depth"
             obs_left_key = "spot_left_depth"
-        elif sensor_type == "gray":
+        elif cfg.sensor_type == "gray":
             obs_right_key = "spot_right_gray"
             obs_left_key = "spot_left_gray"
         observation_space = SpaceDict(
@@ -120,10 +120,14 @@ class NavPolicy(RealPolicy):
                 ),
             }
         )
+        action_dim = 3 if cfg.use_horizontal_velocity else 2
         # Linear, angular, and horizontal velocity (in that order)
         action_space = spaces.Box(-1.0, 1.0, (action_dim,))
         super().__init__(
-            checkpoint_path, observation_space, action_space, device, policy_name
+            cfg,
+            observation_space,
+            action_space,
+            device,
         )
 
 

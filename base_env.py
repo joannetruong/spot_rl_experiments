@@ -10,15 +10,6 @@ def rescale_actions(actions, action_thresh=0.05, silence_only=False):
     actions = np.clip(actions, -1, 1)
     # Silence low actions
     actions[np.abs(actions) < action_thresh] = 0.0
-    if silence_only:
-        return actions
-
-    # Remap action scaling to compensate for silenced values
-    action_offsets = np.ones_like(actions) * action_thresh
-    action_offsets[actions < 0] = -action_offsets[actions < 0]
-    action_offsets[actions == 0] = 0
-    actions = (actions - np.array(action_offsets)) / (1.0 - action_thresh)
-
     return actions
 
 
@@ -70,9 +61,9 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
             base_action = np.array([base_action[0], 0.0, base_action[1]])
         base_action = rescale_actions(base_action, silence_only=True)
         base_action *= [self.max_lin_dist, self.max_lin_dist, self.max_ang_dist]
+
         base_vel = base_action * self.ctrl_hz
 
-        # Spot-real's horizontal velocity is flipped from Habitat's convention
         print(
             f"STEPPING! Vx: {base_vel[0]}, Vy: {base_vel[1]}, Vt: {np.rad2deg(base_vel[2])}"
         )

@@ -26,9 +26,7 @@ def to_tensor(v):
 class RealPolicy:
     def __init__(self, cfg, observation_space, action_space, device):
         self.device = device
-        print(os.path.abspath(cfg.weights))
         checkpoint = torch.load(cfg.weights, map_location="cpu")
-        print("using checkpoint: ", cfg.weights)
         config = checkpoint["config"]
         if "num_cnns" not in config.RL.POLICY:
             config.RL.POLICY["num_cnns"] = 1

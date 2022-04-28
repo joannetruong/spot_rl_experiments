@@ -1,3 +1,4 @@
+import os.path
 import time
 
 import numpy as np
@@ -20,10 +21,9 @@ def to_tensor(v):
 
 
 class RealPolicy:
-    def __init__(self, checkpoint_path, observation_space, action_space, device):
+    def __init__(self, cfg, observation_space, action_space, device):
         self.device = device
-        checkpoint = torch.load(checkpoint_path, map_location="cpu")
-        print("using checkpoint: ", checkpoint_path)
+        checkpoint = torch.load(cfg.weights, map_location="cpu")
         config = checkpoint["config"]
         if "num_cnns" not in config.RL.POLICY:
             config.RL.POLICY["num_cnns"] = 1
@@ -31,7 +31,6 @@ class RealPolicy:
         config.defrost()
         config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = []
         config.freeze()
-
         self.policy = PointNavResNetPolicy.from_config(
             config=config,
             observation_space=observation_space,
@@ -45,6 +44,7 @@ class RealPolicy:
         # If using Splitnet policy, filter out decoder stuff, as it's not used at test-time
         self.policy.load_state_dict(
             {k[len("actor_critic.") :]: v for k, v in checkpoint["state_dict"].items()},
+            # strict=True,
             strict=False,
         )
 
@@ -92,7 +92,7 @@ class RealPolicy:
 
 
 class NavPolicy(RealPolicy):
-    def __init__(self, checkpoint_path, device):
+    def __init__(self, cfg, device):
         observation_space = SpaceDict(
             {
                 "depth": spaces.Box(
@@ -106,10 +106,15 @@ class NavPolicy(RealPolicy):
                 ),
             }
         )
+        action_dim = 3 if cfg.use_horizontal_velocity else 2
         # Linear, angular, and horizontal velocity (in that order)
-        action_space = spaces.Box(-1.0, 1.0, (3,))
-        super().__init__(checkpoint_path, observation_space, action_space, device)
-
+        action_space = spaces.Box(-1.0, 1.0, (action_dim,))
+        super().__init__(
+            cfg,
+            observation_space,
+            action_space,
+            device,
+        )
 
 if __name__ == "__main__":
     nav_policy = NavPolicy(

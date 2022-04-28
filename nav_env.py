@@ -3,17 +3,15 @@ import numpy as np
 from base_env import SpotBaseEnv
 from spot_wrapper.spot import Spot, wrap_heading
 
-SUCCESS_DISTANCE = 0.425
-
 
 class SpotNavEnv(SpotBaseEnv):
-    def __init__(self, spot: Spot):
-        super().__init__(spot)
+    def __init__(self, spot: Spot, cfg):
+        super().__init__(spot, cfg)
         self.goal_xy = None
-        self.succ_distance = SUCCESS_DISTANCE
+        self.succ_distance = cfg.success_dist
+        self.use_horizontal_vel = cfg.use_horizontal_velocity
 
     def reset(self, goal_xy):
-        # self.spot.home_robot()
         self.goal_xy = np.array(goal_xy, dtype=np.float32)
         self.num_actions = 0
         self.num_collisions = 0
@@ -52,6 +50,10 @@ class SpotNavEnv(SpotBaseEnv):
         front_obs = front_obs.reshape(*front_obs.shape[:2], 1)
         observations["depth"] = front_obs
 
+        front_obs = front_obs.reshape(*front_obs.shape[:2], 1)
+        observations[obs_right_key], observations[obs_left_key] = np.split(
+            front_obs, 2, 1
+        )
         # Get rho theta observation
         self.x, self.y, self.yaw = self.spot.get_xy_yaw()
         curr_xy = np.array([self.x, self.y], dtype=np.float32)

@@ -6,14 +6,15 @@ import numpy as np
 import rospy
 from cv_bridge import CvBridge
 from depth_map_utils import fill_in_fast, fill_in_multiscale
+from geometry_msgs.msg import PoseStamped, TwistStamped
 from sensor_msgs.msg import CompressedImage, Image
 from spot_wrapper.spot import Spot, SpotCamIds, image_response_to_cv2, scale_depth_img
 from std_msgs.msg import ByteMultiArray, Float32, Float32MultiArray
 
-RGB_TOPIC = "/camera/color/image_raw/compressed"
-DEPTH_TOPIC = "/camera/aligned_depth_to_color/image_raw/compressed"
-ROBOT_STATE_TOPIC = "/robot_state"
+FRONT_DEPTH_TOPIC = "/spot_cams/filtered_front_depth"
 COLLISION_TOPIC = "/collision"
+FRONT_GRAY_TOPIC = "/spot_cams/front_gray"
+ROBOT_STATE_TOPIC = "/robot_state"
 
 SRC2MSG = {
     SpotCamIds.FRONTLEFT_DEPTH: Image,
@@ -27,7 +28,6 @@ MAX_DEPTH = 10.0
 MIN_DEPTH = 0.0
 FILTER_FRONT_DEPTH = True
 CLAMP_DEPTH = True
-
 
 class SpotRosPublisher:
     def __init__(self, spot, verbose=False):
@@ -58,6 +58,72 @@ class SpotRosPublisher:
         self.last_publish = time.time()
         self.verbose = verbose
         rospy.loginfo("[spot_ros_node]: Publishing has started.")
+
+    def publish_robot_pose(self):
+        robot_position = self.spot.get_robot_position()
+        robot_quat = self.spot.get_robot_quat()
+
+        robot_pose = PoseStamped()
+        robot_pose.header.stamp = rospy.Time.now()
+        robot_pose.header.frame_id = "map"
+        robot_pose.pose.position.x = robot_position[0]
+        robot_pose.pose.position.y = robot_position[1]
+        robot_pose.pose.position.z = robot_position[2]
+        robot_pose.pose.orientation.x = robot_quat[0]
+        robot_pose.pose.orientation.y = robot_quat[1]
+        robot_pose.pose.orientation.z = robot_quat[2]
+        robot_pose.pose.orientation.w = robot_quat[3]
+        self.pose_pub.publish(robot_pose)
+
+    def publish_robot_vel(self):
+        robot_linear_velocity = self.spot.get_robot_linear_vel("vision")
+        robot_angular_velocity = self.spot.get_robot_angular_vel("vision")
+
+        robot_twist = TwistStamped()
+        robot_twist.header.stamp = rospy.Time.now()
+        robot_twist.twist.linear.x = robot_linear_velocity[0]
+        robot_twist.twist.linear.y = robot_linear_velocity[1]
+        robot_twist.twist.linear.z = robot_linear_velocity[2]
+        robot_twist.twist.angular.x = robot_angular_velocity[0]
+        robot_twist.twist.angular.y = robot_angular_velocity[1]
+        robot_twist.twist.angular.z = robot_angular_velocity[2]
+
+        self.vis_vel_pub.publish(robot_twist)
+
+    def publish_collisions(self, depth_eyes, collision_eyes):
+        # Filter
+        min_x_depths = []
+        min_y_depths = []
+        num_collisions = 0
+        all_depth_eyes = {**depth_eyes, **collision_eyes}
+        x_keys = [
+            SpotCamIds.FRONTRIGHT_DEPTH,
+            SpotCamIds.FRONTLEFT_DEPTH,
+            SpotCamIds.BACK_DEPTH,
+        ]
+        y_keys = [SpotCamIds.LEFT_DEPTH, SpotCamIds.RIGHT_DEPTH]
+
+        for x in x_keys:
+            scaled_depth = scale_depth_img(all_depth_eyes[x], max_depth=MAX_DEPTH)
+            scaled_depth = np.uint8(scaled_depth * 255.0)
+            scaled_depth = self.filter_depth(scaled_depth, MAX_DEPTH)
+            min_x_depths.append(self.get_min_dist(scaled_depth))
+        for y in y_keys:
+            scaled_depth = scale_depth_img(all_depth_eyes[y], max_depth=MAX_DEPTH)
+            scaled_depth = np.uint8(scaled_depth * 255.0)
+            scaled_depth = self.filter_depth(scaled_depth, MAX_DEPTH)
+            min_y_depths.append(self.get_min_dist(scaled_depth))
+        if any(depth < 0.3 for depth in min_x_depths) or any(
+            depth == 3.5 for depth in min_x_depths
+        ):
+            num_collisions = 1.0
+        if any(depth < 0.2 for depth in min_y_depths) or any(
+            depth == 3.5 for depth in min_y_depths
+        ):
+            num_collisions = 1.0
+        collisions = Float32()
+        collisions.data = num_collisions
+        self.collision_pub.publish(collisions)
 
     def publish_msgs(self):
         st = time.time()
@@ -160,16 +226,16 @@ class SpotRosSubscriber:
 
         # Instantiate subscribers
         rospy.Subscriber(
-            DEPTH_TOPIC,
+            FRONT_DEPTH_TOPIC,
             Image,
             self.front_depth_callback,
             queue_size=1,
             buff_size=2**24,
         )
         rospy.Subscriber(
-            RGB_TOPIC,
+            FRONT_GRAY_TOPIC,
             Image,
-            self.front_rgb_callback,
+            self.front_gray_callback,
             queue_size=1,
             buff_size=2**24,
         )
@@ -184,11 +250,13 @@ class SpotRosSubscriber:
             Float32,
             self.collision_callback,
             queue_size=1,
+            buff_size=2**24,
         )
 
         # Msg holders
         self.front_depth = None
-        self.front_rgb = None
+        self.back_depth = None
+        self.collision = 0.0
         self.x = 0.0
         self.y = 0.0
         self.yaw = 0.0
@@ -200,18 +268,18 @@ class SpotRosSubscriber:
 
     def front_depth_callback(self, msg):
         self.front_depth = msg
-        self.depth_updated = True
+        self.front_depth_updated = True
 
-    def front_rgb_callback(self, msg):
-        self.front_rgb = msg
-        self.rgb_updated = True
+    def front_gray_callback(self, msg):
+        self.front_gray = msg
+        self.gray_updated = True
 
     def robot_state_callback(self, msg):
         self.x, self.y, self.yaw = msg.data[:3]
 
     def collision_callback(self, msg):
         self.collision = msg.data
-        self.collision_ @ property
+        self.collision_updated = True
 
     def collided(self):
         if not self.collision_updated:
@@ -229,15 +297,22 @@ class SpotRosSubscriber:
 
     @property
     def front_depth_img(self):
-        if self.front_depth is None or not self.depth_updated:
-            print("IMAGE IS NONE!")
+        if self.front_depth is None or not self.front_depth_updated:
+            print("DEPTH IMAGE IS NONE!")
             return None
         return self.ros_to_img(self.front_depth)
 
     @property
-    def front_rgb_img(self):
-        if self.front_rgb is None or not self.rgb_updated:
-            print("IMAGE IS NONE!")
+    def collided(self):
+        if not self.collision_updated:
+            return 0.0
+        self.collision_updated = False
+        return self.collision
+
+    @property
+    def front_gray_img(self):
+        if self.front_gray is None or not self.gray_updated:
+            print("GRAY IMAGE IS NONE!")
             return None
         return self.ros_to_img(self.front_rgb)
 

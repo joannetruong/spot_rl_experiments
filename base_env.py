@@ -2,9 +2,8 @@ import time
 
 import gym
 import numpy as np
-from spot_ros_node import SpotRosSubscriber
+from external_camera_ros_node import ExternalRosSubscriber
 from spot_wrapper.spot import Spot, wrap_heading
-
 
 def rescale_actions(actions, action_thresh=0.05, silence_only=False):
     actions = np.clip(actions, -1, 1)
@@ -12,8 +11,7 @@ def rescale_actions(actions, action_thresh=0.05, silence_only=False):
     actions[np.abs(actions) < action_thresh] = 0.0
     return actions
 
-
-class SpotBaseEnv(SpotRosSubscriber, gym.Env):
+class SpotBaseEnv(ExternalRosSubscriber, gym.Env):
     def __init__(self, spot: Spot, cfg):
         super().__init__("spot_reality_gym")
         self.spot = spot
@@ -56,6 +54,7 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         :return:
         """
         assert self.reset_ran, ".reset() must be called first!"
+
         # Command velocities using the input action
         if not self.use_horizontal_velocity:
             base_action = np.array([base_action[0], 0.0, base_action[1]])
@@ -69,6 +68,7 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         )
         start_time = time.time()
         self.spot.set_base_velocity(*base_vel, 1 / self.ctrl_hz)
+
         # Pause until enough time has passed during this step
         while time.time() < start_time + 1 / self.ctrl_hz:
             pass

@@ -40,8 +40,8 @@ def main(cfg):
                     (observations["spot_left_depth"] * 255),
                 )
                 cv2.imwrite(
-                    f"img/right_depth_{env.num_actions}.png",
-                    (observations["spot_right_depth"] * 255),
+                    f"img/coda_depth_{env.num_actions}.png",
+                    (observations["depth"] * 255),
                 )
             action = policy.act(observations)
             observations, _, done, _ = env.step(base_action=action)

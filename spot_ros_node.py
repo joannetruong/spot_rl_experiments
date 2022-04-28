@@ -1,7 +1,6 @@
 import argparse
 import time
 
-import blosc
 import cv2
 import numpy as np
 import rospy
@@ -9,30 +8,26 @@ from cv_bridge import CvBridge
 from depth_map_utils import fill_in_fast, fill_in_multiscale
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from sensor_msgs.msg import CompressedImage, Image
-from spot_wrapper.spot import (Spot, SpotCamIds, image_response_to_cv2,
-                               scale_depth_img)
+from spot_wrapper.spot import Spot, SpotCamIds, image_response_to_cv2, scale_depth_img
 from std_msgs.msg import ByteMultiArray, Float32, Float32MultiArray
 
 FRONT_DEPTH_TOPIC = "/spot_cams/filtered_front_depth"
 COLLISION_TOPIC = "/collision"
 FRONT_GRAY_TOPIC = "/spot_cams/front_gray"
 ROBOT_STATE_TOPIC = "/robot_state"
-POSE_TOPIC = "/spot_pose"
-VIS_VEL_TOPIC = "/spot_vision_vel"
 
 SRC2MSG = {
     SpotCamIds.FRONTLEFT_DEPTH: Image,
     SpotCamIds.FRONTRIGHT_DEPTH: Image,
-    SpotCamIds.FRONTLEFT_FISHEYE: Image,
-    SpotCamIds.FRONTRIGHT_FISHEYE: Image,
     SpotCamIds.BACK_DEPTH: Image,
     SpotCamIds.LEFT_DEPTH: Image,
     SpotCamIds.RIGHT_DEPTH: Image,
 }
-MAX_DEPTH = 3.5
+
+MAX_DEPTH = 10.0
+MIN_DEPTH = 0.0
 FILTER_FRONT_DEPTH = True
 CLAMP_DEPTH = True
-
 
 class SpotRosPublisher:
     def __init__(self, spot, verbose=False):
@@ -50,32 +45,15 @@ class SpotRosPublisher:
         ]
 
         # Instantiate filtered image publishers
-        self.use_front_depth = (
+        self.monitor_collision = (
             SpotCamIds.FRONTLEFT_DEPTH in self.sources
             and SpotCamIds.FRONTRIGHT_DEPTH in self.sources
-        )
-        self.filter_front_depth = FILTER_FRONT_DEPTH
-        if self.use_front_depth:
-            self.front_depth_pub = rospy.Publisher(
-                FRONT_DEPTH_TOPIC, Image, queue_size=1
-            )
-
-        self.monitor_collision = (
-            SpotCamIds.BACK_DEPTH in self.sources
+            and SpotCamIds.BACK_DEPTH in self.sources
             and SpotCamIds.LEFT_DEPTH in self.sources
             and SpotCamIds.RIGHT_DEPTH in self.sources
         )
         if self.monitor_collision:
             self.collision_pub = rospy.Publisher(COLLISION_TOPIC, Float32, queue_size=1)
-        self.use_front_gray = (
-            SpotCamIds.FRONTLEFT_FISHEYE in self.sources
-            and SpotCamIds.FRONTRIGHT_FISHEYE in self.sources
-        )
-        if self.use_front_gray:
-            self.front_gray_pub = rospy.Publisher(FRONT_GRAY_TOPIC, Image, queue_size=1)
-
-        self.pose_pub = rospy.Publisher(POSE_TOPIC, PoseStamped, queue_size=1)
-        self.vis_vel_pub = rospy.Publisher(VIS_VEL_TOPIC, TwistStamped, queue_size=1)
 
         self.last_publish = time.time()
         self.verbose = verbose
@@ -153,11 +131,9 @@ class SpotRosPublisher:
         retrieval_time = time.time() - st
         # Publish raw images
         depth_eyes = {}
-        gray_eyes = {}
-        collision_eyes = {}
-        depth_keys = [SpotCamIds.FRONTRIGHT_DEPTH, SpotCamIds.FRONTLEFT_DEPTH]
-        gray_keys = [SpotCamIds.FRONTRIGHT_FISHEYE, SpotCamIds.FRONTLEFT_FISHEYE]
-        collision_keys = [
+        depth_keys = [
+            SpotCamIds.FRONTLEFT_DEPTH,
+            SpotCamIds.FRONTRIGHT_DEPTH,
             SpotCamIds.BACK_DEPTH,
             SpotCamIds.LEFT_DEPTH,
             SpotCamIds.RIGHT_DEPTH,
@@ -166,41 +142,42 @@ class SpotRosPublisher:
             img = image_response_to_cv2(response)
 
             # Publish filtered front depth images later
-            if src in depth_keys and self.use_front_depth:
+            if src in depth_keys:
                 depth_eyes[src] = img
 
-            if src in gray_keys and self.use_front_gray:
-                gray_eyes[src] = img
-
-            if src in collision_keys and self.monitor_collision:
-                collision_eyes[src] = img
-        if self.use_front_gray:
-            gray_merged = np.hstack([gray_eyes[g] for g in gray_keys])
-
-            gray_msg = self.cv_bridge.cv2_to_imgmsg(gray_merged)
-            self.front_gray_pub.publish(gray_msg)
-
-        # Filter and publish
-        if self.use_front_depth:
-            # Merge
-            depth_merged = np.hstack([depth_eyes[d] for d in depth_keys])
-            # Filter
-            depth_merged = scale_depth_img(depth_merged, max_depth=MAX_DEPTH)
-            depth_merged = np.uint8(depth_merged * 255.0)
-            if self.filter_front_depth:
-                depth_merged = self.filter_depth(depth_merged, MAX_DEPTH)
-            depth_merged = cv2.resize(
-                depth_merged, (256, 256), interpolation=cv2.INTER_AREA
-            )
-            depth_msg = self.cv_bridge.cv2_to_imgmsg(depth_merged, encoding="mono8")
-
-            self.front_depth_pub.publish(depth_msg)
         if self.monitor_collision:
-            self.publish_collisions(depth_eyes, collision_eyes)
+            # Filter
+            min_x_depths = []
+            min_y_depths = []
+            num_collisions = 0
+            x_keys = [
+                SpotCamIds.FRONTRIGHT_DEPTH,
+                SpotCamIds.FRONTLEFT_DEPTH,
+                SpotCamIds.BACK_DEPTH,
+            ]
+            y_keys = [SpotCamIds.LEFT_DEPTH, SpotCamIds.RIGHT_DEPTH]
 
-        self.publish_robot_pose()
-        self.publish_robot_vel()
-
+            for x in x_keys:
+                scaled_depth = scale_depth_img(depth_eyes[x], max_depth=MAX_DEPTH)
+                scaled_depth = np.uint8(scaled_depth * 255.0)
+                scaled_depth = self.filter_depth(scaled_depth, MAX_DEPTH)
+                min_x_depths.append(self.get_min_dist(scaled_depth))
+            for y in y_keys:
+                scaled_depth = scale_depth_img(depth_eyes[y], max_depth=MAX_DEPTH)
+                scaled_depth = np.uint8(scaled_depth * 255.0)
+                scaled_depth = self.filter_depth(scaled_depth, MAX_DEPTH)
+                min_y_depths.append(self.get_min_dist(scaled_depth))
+            if any(depth < 0.3 for depth in min_x_depths) or any(
+                depth == 3.5 for depth in min_x_depths
+            ):
+                num_collisions = 1.0
+            if any(depth < 0.2 for depth in min_y_depths) or any(
+                depth == 3.5 for depth in min_y_depths
+            ):
+                num_collisions = 1.0
+            collisions = Float32()
+            collisions.data = num_collisions
+            self.collision_pub.publish(collisions)
         if self.verbose:
             rospy.loginfo(
                 f"[spot_ros_node]: Image retrieval / publish time: "
@@ -284,9 +261,9 @@ class SpotRosSubscriber:
         self.y = 0.0
         self.yaw = 0.0
 
-        self.front_depth_updated = False
+        self.depth_updated = False
+        self.rgb_updated = False
         self.collision_updated = False
-        self.gray_updated = False
         rospy.loginfo(f"[{node_name}]: Subscribing has started.")
 
     def front_depth_callback(self, msg):
@@ -304,6 +281,11 @@ class SpotRosSubscriber:
         self.collision = msg.data
         self.collision_updated = True
 
+    def collided(self):
+        if not self.collision_updated:
+            return 0.0
+        return self.collision
+
     def ros_to_img(self, ros_img):
         # Gather latest images
         if isinstance(ros_img, ByteMultiArray):
@@ -318,7 +300,6 @@ class SpotRosSubscriber:
         if self.front_depth is None or not self.front_depth_updated:
             print("DEPTH IMAGE IS NONE!")
             return None
-        self.front_depth_updated = False
         return self.ros_to_img(self.front_depth)
 
     @property
@@ -333,7 +314,36 @@ class SpotRosSubscriber:
         if self.front_gray is None or not self.gray_updated:
             print("GRAY IMAGE IS NONE!")
             return None
-        return self.ros_to_img(self.front_gray)
+        return self.ros_to_img(self.front_rgb)
+
+    @property
+    def collided(self):
+        if not self.collision_updated:
+            return 0.0
+        return self.collision
+
+    def ros_to_img(self, ros_img):
+        # Gather latest images
+        if isinstance(ros_img, ByteMultiArray):
+            return decode_ros_blosc(ros_img)
+        elif isinstance(ros_img, CompressedImage):
+            return self.cv_bridge.compressed_imgmsg_to_cv2(ros_img)
+        elif isinstance(ros_img, Image):
+            return self.cv_bridge.imgmsg_to_cv2(ros_img)
+
+    @property
+    def front_depth_img(self):
+        if self.front_depth is None or not self.depth_updated:
+            print("IMAGE IS NONE!")
+            return None
+        return self.ros_to_img(self.front_depth)
+
+    @property
+    def front_rgb_img(self):
+        if self.front_rgb is None or not self.rgb_updated:
+            print("IMAGE IS NONE!")
+            return None
+        return self.ros_to_img(self.front_rgb)
 
 
 class SpotRosProprioceptionPublisher:

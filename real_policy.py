@@ -7,9 +7,6 @@ from gym import spaces
 from gym.spaces import Dict as SpaceDict
 from habitat_baselines.rl.ddppo.policy.resnet_policy import \
     PointNavResNetPolicy
-from habitat_baselines.rl.ddppo.policy.splitnet_policy import \
-    PointNavSplitNetPolicy
-from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy
 from habitat_baselines.utils.common import batch_obs
 
 
@@ -34,7 +31,7 @@ class RealPolicy:
         config.defrost()
         config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = []
         config.freeze()
-        self.policy = eval(cfg.policy_name).from_config(
+        self.policy = PointNavResNetPolicy.from_config(
             config=config,
             observation_space=observation_space,
             action_space=action_space,
@@ -96,19 +93,10 @@ class RealPolicy:
 
 class NavPolicy(RealPolicy):
     def __init__(self, cfg, device):
-        if cfg.sensor_type == "depth":
-            obs_right_key = "spot_right_depth"
-            obs_left_key = "spot_left_depth"
-        elif cfg.sensor_type == "gray":
-            obs_right_key = "spot_right_gray"
-            obs_left_key = "spot_left_gray"
         observation_space = SpaceDict(
             {
-                obs_left_key: spaces.Box(
-                    low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
-                ),
-                obs_right_key: spaces.Box(
-                    low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
+                "depth": spaces.Box(
+                    low=0.0, high=1.0, shape=(320, 240, 1), dtype=np.float32
                 ),
                 "pointgoal_with_gps_compass": spaces.Box(
                     low=np.finfo(np.float32).min,
@@ -128,7 +116,6 @@ class NavPolicy(RealPolicy):
             device,
         )
 
-
 if __name__ == "__main__":
     nav_policy = NavPolicy(
         "weights/spot_cam_kinematic_hm3d_gibson_ckpt_27.pth",
@@ -136,8 +123,7 @@ if __name__ == "__main__":
     )
     nav_policy.reset()
     observations = {
-        "spot_left_depth": np.zeros([256, 128, 1], dtype=np.float32),
-        "spot_right_depth": np.zeros([256, 128, 1], dtype=np.float32),
+        "spot_depth": np.zeros([320, 240, 1], dtype=np.float32),
         "pointgoal_with_gps_compass": np.zeros(2, dtype=np.float32),
     }
     actions = nav_policy.act(observations)

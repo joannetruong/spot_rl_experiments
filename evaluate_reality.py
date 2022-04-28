@@ -39,7 +39,7 @@ def main(spot):
         while not done:
             if args.debug:
                 cv2.imwrite(
-                    f"img/depth_{env.num_actions}.png",
+                    f"img/coda_depth_{env.num_actions}.png",
                     (observations["depth"] * 255),
                 )
             action = policy.act(observations)

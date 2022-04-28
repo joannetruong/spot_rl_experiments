@@ -13,7 +13,7 @@ class SpotNavEnv(SpotBaseEnv):
         self.succ_distance = SUCCESS_DISTANCE
 
     def reset(self, goal_xy):
-        self.spot.home_robot()
+        # self.spot.home_robot()
         self.goal_xy = np.array(goal_xy, dtype=np.float32)
         self.num_actions = 0
         self.num_collisions = 0
@@ -40,6 +40,7 @@ class SpotNavEnv(SpotBaseEnv):
             f"yaw: {np.rad2deg(self.yaw):.2f}\t"
             f"# actions: {self.num_actions}\t"
             f"# collisions: {self.num_collisions}\t"
+            f"# episode_distance: {self.episode_distance}\t"
         )
 
     def get_nav_observation(self, goal_xy):
@@ -54,6 +55,7 @@ class SpotNavEnv(SpotBaseEnv):
         # Get rho theta observation
         self.x, self.y, self.yaw = self.spot.get_xy_yaw()
         curr_xy = np.array([self.x, self.y], dtype=np.float32)
+        print("curr_xy: ", curr_xy, self.yaw)
         rho = np.linalg.norm(curr_xy - goal_xy)
         theta = np.arctan2(goal_xy[1] - self.y, goal_xy[0] - self.x) - self.yaw
         rho_theta = np.array([rho, wrap_heading(theta)], dtype=np.float32)
@@ -68,6 +70,7 @@ class SpotNavEnv(SpotBaseEnv):
         if succ:
             print("SUCCESS!")
             self.spot.set_base_velocity(0.0, 0.0, 0.0, self.vel_time)
+            self.print_nav_stats(observations)
         return succ
 
     def get_observations(self):

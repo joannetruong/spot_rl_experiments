@@ -7,11 +7,12 @@ defaults:
 disable_obstacle_avoidance: True
 
 # Goal, specified relative to Spot
-goal_x: 4.0
+goal_x: 10.0
 goal_y: 0.0
 
 # Policy configs
-weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_sd_1_ckpt_45.pth
+#weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_sd_1_ckpt_45.pth
+weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_sd_1_ckpt_63.pth
 sensor_type: depth
 policy_name: PointNavBaselinePolicy
 use_horizontal_velocity: False
@@ -27,6 +28,7 @@ max_episode_steps: 500
 
 # Debug mode
 debug: False # saves images to disk
+timeout: 20 # terminate if X seconds passes. Set to -1 if you don't want to use a timeout
 use_keyboard: False # wait for keyboard input before stepping robot
 
 hydra:

@@ -32,6 +32,9 @@ def main(cfg):
     observations = env.reset([goal_x, goal_y])
     done = False
     time.sleep(2)
+    stop_time = None
+    if cfg.timeout != -1:
+        stop_time = time.time() + cfg.timeout
     try:
         while not done:
             if cfg.debug:
@@ -45,6 +48,9 @@ def main(cfg):
                 )
             action = policy.act(observations)
             observations, _, done, _ = env.step(base_action=action)
+            if cfg.timeout != -1 and stop_time < time.time():
+                print("############# Timeout reached. Stopping ############# ")
+                done = True
             if done:
                 print(
                     "Final Agent Episode Distance: {:.3f}".format(env.episode_distance)

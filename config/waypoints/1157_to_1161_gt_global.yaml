@@ -1,0 +1,51 @@
+  0:
+    goal_x: 2.5
+    goal_y: 1.8
+  1:
+    goal_x: 4.5
+    goal_y: 4.0
+  2:
+    goal_x: 8.6
+    goal_y: 5.0
+  3:
+    goal_x: 12.31
+    goal_y: 5.86
+  4:
+    goal_x: 18.25
+    goal_y: 6.2
+  5:
+    goal_x: 21.1
+    goal_y: 7.72
+  6:
+    goal_x: 23.18
+    goal_y: 9.52
+  7:
+    goal_x: 23.97
+    goal_y: 6.472
+  8:
+    goal_x: 24.7574
+    goal_y: 2.7640
+  9:
+    goal_x: 24.7574
+    goal_y: -1.7064
+  10:
+    goal_x: 24.7574
+    goal_y: -5.2878
+  11:
+    goal_x: 25.6214
+    goal_y: -8.8692
+  12:
+    goal_x: 27.7296
+    goal_y: -11.5362
+  13:
+    goal_x: 31.6158
+    goal_y: -11.5362
+  14:
+    goal_x: 35.5782
+    goal_y: -11.22124
+  15:
+    goal_x: 38.093
+    goal_y: -9.85
+  16: # ends by the stairs
+    goal_x: 40.43
+    goal_y: -8.757

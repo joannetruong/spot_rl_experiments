@@ -176,7 +176,9 @@ class SpotRosPublisher:
                 collision_eyes[src] = img
         if self.use_front_gray:
             gray_merged = np.hstack([gray_eyes[g] for g in gray_keys])
-
+            gray_merged = cv2.resize(
+                gray_merged, (256, 256), interpolation=cv2.INTER_AREA
+            )
             gray_msg = self.cv_bridge.cv2_to_imgmsg(gray_merged)
             self.front_gray_pub.publish(gray_msg)
 

@@ -38,15 +38,12 @@ def main(cfg):
     try:
         while not done:
             if cfg.debug:
+                img = np.concatenate([observations["spot_right_depth"], observations["spot_left_depth"]], axis=1)
                 cv2.imwrite(
-                    f"img/left_depth_{env.num_actions}.png",
-                    (observations["spot_left_depth"] * 255),
+                    f"img/depth_{env.num_actions}.png",
+                    (img * 255),
                 )
-                cv2.imwrite(
-                    f"img/right_depth_{env.num_actions}.png",
-                    (observations["spot_right_depth"] * 255),
-                )
-            action = policy.act(observations)
+            action = policy.act(observations, deterministic=cfg.deterministic)
             observations, _, done, _ = env.step(base_action=action)
             if cfg.timeout != -1 and stop_time < time.time():
                 print("############# Timeout reached. Stopping ############# ")

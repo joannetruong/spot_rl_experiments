@@ -71,7 +71,7 @@ class RealPolicy:
         self.not_done_masks = torch.zeros(1, 1, dtype=torch.bool, device=self.device)
         self.prev_actions = torch.zeros(1, self.num_actions, device=self.device)
 
-    def act(self, observations):
+    def act(self, observations, deterministic=True):
         assert self.reset_ran, "You need to call .reset() on the policy first."
         batch = batch_obs([observations], device=self.device)
         with torch.no_grad():
@@ -81,7 +81,7 @@ class RealPolicy:
                 self.test_recurrent_hidden_states,
                 self.prev_actions,
                 self.not_done_masks,
-                deterministic=True,
+                deterministic=deterministic,
             )
             inf_time = time.time() - start_time
             print(f"Inference time: {inf_time}")

@@ -8,15 +8,11 @@ class SpotNavEnv(SpotBaseEnv):
     def __init__(self, spot: Spot, cfg):
         super().__init__(spot, cfg)
         self.goal_xy = None
-        self._log_goal = cfg.log_goal
         self.succ_distance = cfg.success_dist
-        if self._log_goal:
-            self.succ_distance = np.log(self.succ_distance)
-        self._project_goal = cfg.project_goal
         self.use_horizontal_vel = cfg.use_horizontal_velocity
 
-    def reset(self, goal_xy, yaw=None):
-        self.spot.home_robot(yaw)
+    def reset(self, goal_xy):
+        self.spot.home_robot()
         print("Reset! Curr pose: ", self.spot.get_xy_yaw())
         self.goal_xy = np.array(goal_xy, dtype=np.float32)
         self.num_actions = 0
@@ -36,8 +32,6 @@ class SpotNavEnv(SpotBaseEnv):
 
     def print_nav_stats(self, observations):
         rho, theta = observations["pointgoal_with_gps_compass"]
-        if self._log_goal:
-            rho = np.exp(rho)
         print(
             f"Dist to goal: {rho:.2f}\t"
             f"theta: {np.rad2deg(theta):.2f}\t"
@@ -47,6 +41,14 @@ class SpotNavEnv(SpotBaseEnv):
             f"# actions: {self.num_actions}\t"
             f"# collisions: {self.num_collisions}\t"
         )
+
+    def _compute_pointgoal(self, goal_xy):
+        # Get rho theta observation
+        self.x, self.y, self.yaw = self.spot.get_xy_yaw()
+        curr_xy = np.array([self.x, self.y], dtype=np.float32)
+        rho = np.linalg.norm(curr_xy - goal_xy)
+        theta = np.arctan2(goal_xy[1] - self.y, goal_xy[0] - self.x) - self.yaw
+        return np.array([rho, wrap_heading(theta)], dtype=np.float32)
 
     def get_nav_observation(self, goal_xy):
         observations = {}
@@ -66,30 +68,8 @@ class SpotNavEnv(SpotBaseEnv):
         observations[obs_right_key], observations[obs_left_key] = np.split(
             front_obs, 2, 1
         )
-        # Get rho theta observation
-        self.x, self.y, self.yaw = self.spot.get_xy_yaw()
-        curr_xy = np.array([self.x, self.y], dtype=np.float32)
-        rho = np.linalg.norm(curr_xy - goal_xy)
 
-        if self._project_goal != -1:
-            try:
-                slope = (goal_xy[1] - self.y) / (goal_xy[0] - self.x)
-                print('self.x: ', self.x, self.y, 'goal: ', goal_xy, 'slope: ', slope)
-                proj_goal_x = self._project_goal + self.x
-                proj_goal_y = (self._project_goal * slope) + self.y
-                proj_goal_xy = np.array([proj_goal_x, proj_goal_y])
-                proj_rho = np.linalg.norm(curr_xy - proj_goal_xy)
-                print("proj_rho: ", proj_rho, "proj_xy: ", proj_goal_xy, " rho: ", rho, "goal_xy: ", goal_xy)
-                if proj_rho < rho:
-                    goal_xy = proj_goal_xy
-                    rho = proj_rho
-            except:
-                pass
-        theta = np.arctan2(goal_xy[1] - self.y, goal_xy[0] - self.x) - self.yaw
-        if self._log_goal:
-            rho_theta = np.array([np.log(rho), wrap_heading(theta)], dtype=np.float32)
-        else:
-            rho_theta = np.array([rho, wrap_heading(theta)], dtype=np.float32)
+        rho_theta = self._compute_pointgoal(goal_xy)
 
         # Get goal heading observation
         observations["pointgoal_with_gps_compass"] = rho_theta
@@ -115,3 +95,18 @@ class SpotNavEnv(SpotBaseEnv):
         self.num_actions += 1
         self.num_collisions += self.collided
         return observations, reward, done, info
+
+class SpotContextNavEnv(SpotNavEnv):
+    def __init__(self, spot: Spot, cfg):
+        super().__init__(spot, cfg)
+        self.wpt_xy = None
+
+    def get_context_observations(self, waypoint_xy):
+        observations = {}
+        rho_theta = self._compute_pointgoal(waypoint_xy)
+        observations["context_waypoint"] = rho_theta
+
+    def get_observations(self):
+        nav_obs = self.get_nav_observation(self.goal_xy)
+        context_obs = self.get_context_observations(self.wpt_xy)
+        return nav_obs + context_obs

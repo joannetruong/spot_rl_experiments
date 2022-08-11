@@ -1,0 +1,54 @@
+  999:
+    goal_x: 40.43
+    goal_y: -8.757
+  0:
+    goal_x: 2.45
+    goal_y: 2.08
+  1:
+    goal_x: 2.25
+    goal_y: 5.15
+  2:
+    goal_x: 4.75
+    goal_y: 0.0
+  3:
+    goal_x: 4.9
+    goal_y: 0.0
+  4: # slope
+    goal_x: 7.0
+    goal_y: 0.0
+  # 5:
+  #   goal_x: 2.8448
+  #   goal_y: 1.524
+  5: # starts to turn right
+    goal_x: 2.2
+    goal_y: -3.2
+  6:
+    goal_x: 0.91
+    goal_y: -3.14
+  7:
+    goal_x: 1.03
+    goal_y: -3.9
+  8:
+    goal_x: 0.0
+    goal_y: -4.62
+  9:
+    goal_x: 0.0
+    goal_y: -3.82
+  10:
+    goal_x: 1.15
+    goal_y: -3.66
+  11:
+    goal_x: 3.05
+    goal_y: -2.32
+  12:
+    goal_x: 4.04
+    goal_y: 0.0
+  13:
+    goal_x: 4.11
+    goal_y: 0.31496
+  14:
+    goal_x: 2.82
+    goal_y: 1.59
+  15: # ends by the stairs
+    goal_x: 2.44
+    goal_y: 1.1

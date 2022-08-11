@@ -3,10 +3,10 @@
     goal_y: 2.08
   1:
     goal_x: 2.25
-    goal_y: 5.15
+    goal_y: 2.2
   2:
     goal_x: 4.75
-    goal_y: 0.0
+    goal_y: 2.95
   3:
     goal_x: 4.9
     goal_y: 0.0
@@ -33,16 +33,16 @@
     goal_y: -3.66
   11:
     goal_x: 3.05
-    goal_y: -2.32
+    goal_y: -3.32
   12:
     goal_x: 4.04
-    goal_y: 0.0
+    goal_y: -1.0
   13:
     goal_x: 4.11
-    goal_y: 0.31496
+    goal_y: 0.0
   14:
     goal_x: 2.82
-    goal_y: 1.59
+    goal_y: 1.0
   15:
     goal_x: 2.44
-    goal_y: 1.1
+    goal_y: 2.51

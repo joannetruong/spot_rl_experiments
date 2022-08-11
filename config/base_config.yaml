@@ -7,15 +7,19 @@ defaults:
 disable_obstacle_avoidance: True
 
 # Goal, specified relative to Spot
-goal_x: 4.0
+goal_x: 30.0
 goal_y: 0.0
 
 # Policy configs
-#weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_sd_1_ckpt_45.pth
-weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_sd_1_ckpt_63.pth
+# weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_rand_pitch_sd_1_ckpt_63.pth
+# weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_bp_0.03_sd_1_ckpt_84.pth
+weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_hm3d_mf_rand_pitch_-1.0_1.0_bp_0.03_log_sd_1_ckpt_95.pth
+=
 sensor_type: depth
+# sensor_type: gray
 policy_name: PointNavBaselinePolicy
 use_horizontal_velocity: False
+deterministic: True
 
 # Control configs
 ctrl_hz: 2
@@ -24,7 +28,9 @@ max_ang_dist: 0.26 # rad/s
 
 # Success criteria
 success_dist: 0.425
-max_episode_steps: 500
+project_goal: -1
+log_goal: True
+max_episode_steps: 1000
 
 # Debug mode
 debug: False # saves images to disk

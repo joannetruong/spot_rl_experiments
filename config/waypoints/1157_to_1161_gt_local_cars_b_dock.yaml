@@ -1,0 +1,48 @@
+  0:
+    goal_x: 3.44
+    goal_y: 2.51
+  1:
+    goal_x: 2.82
+    goal_y: 1.0
+  2:
+    goal_x: 4.11
+    goal_y: 0.0
+  3:
+    goal_x: 4.04
+    goal_y: -1.0
+  4:
+    goal_x: 3.05
+    goal_y: -3.32
+  5:
+    goal_x: 1.15
+    goal_y: -3.66
+  6:
+    goal_x: 0.0
+    goal_y: -3.82
+  7:
+    goal_x: 0.0
+    goal_y: -4.62
+  8:
+    goal_x: 1.03
+    goal_y: -3.9
+  9:
+    goal_x: 0.91
+    goal_y: -3.14
+  10:
+    goal_x: 2.2
+    goal_y: -3.2
+  11:
+    goal_x: 7.0
+    goal_y: 0.0
+  12:
+    goal_x: 4.9
+    goal_y: 0.0
+  13:
+    goal_x: 4.75
+    goal_y: 2.95
+  14:
+    goal_x: 2.25
+    goal_y: 2.2
+  15:  
+    goal_x: 1.5
+    goal_y: 2.08    

@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - waypoints: 1157_to_1161_gt_local.yaml
+  - waypoints: 1157_to_1161_waypoint.yaml
   - override hydra/hydra_logging: disabled
   - override hydra/job_logging: disabled
 
@@ -10,11 +10,9 @@ disable_obstacle_avoidance: True
 # Goal, specified relative to Spot
 
 # Policy configs
-#weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_sd_1_ckpt_45.pth
-weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_rand_pitch_sd_1_ckpt_63.pth
+weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_-1.0_1.0_bp_0.03_sd_2_16env_context_no_noise_log_waypoint_ckpt_64.pth
 sensor_type: depth
 policy_name: PointNavContextPolicy
-context_type: waypoint
 use_horizontal_velocity: False
 use_local_coords: True
 

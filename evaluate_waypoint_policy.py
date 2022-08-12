@@ -22,7 +22,7 @@ def main(cfg):
     policy = NavPolicy(cfg, device)
     policy.reset()
 
-    env = SpotNavEnv(spot, cfg)
+    env = SpotContextNavEnv(spot, cfg)
     env.sensor_type = cfg.sensor_type
     waypoints = cfg.waypoints
 

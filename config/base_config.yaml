@@ -14,7 +14,7 @@ goal_y: 0.0
 # weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_rand_pitch_sd_1_ckpt_63.pth
 # weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_bp_0.03_sd_1_ckpt_84.pth
 weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_hm3d_mf_rand_pitch_-1.0_1.0_bp_0.03_log_sd_1_ckpt_95.pth
-=
+
 sensor_type: depth
 # sensor_type: gray
 policy_name: PointNavBaselinePolicy

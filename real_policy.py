@@ -9,9 +9,9 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import \
     PointNavResNetPolicy
 from habitat_baselines.rl.ddppo.policy.splitnet_policy import \
     PointNavSplitNetPolicy
-from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy
+from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy, PointNavContextPolicy
 from habitat_baselines.utils.common import batch_obs
-
+from habitat.config import Config
 
 # Turn numpy observations into torch tensors for consumption by policy
 def to_tensor(v):
@@ -33,6 +33,7 @@ class RealPolicy:
         """ Disable observation transforms for real world experiments """
         config.defrost()
         config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = []
+        
         config.freeze()
         self.policy = eval(cfg.policy_name).from_config(
             config=config,
@@ -121,6 +122,49 @@ class NavPolicy(RealPolicy):
         action_dim = 3 if cfg.use_horizontal_velocity else 2
         # Linear, angular, and horizontal velocity (in that order)
         action_space = spaces.Box(-1.0, 1.0, (action_dim,))
+        action_space.n = action_dim
+        super().__init__(
+            cfg,
+            observation_space,
+            action_space,
+            device,
+        )
+class ContextNavPolicy(RealPolicy):
+    def __init__(self, cfg, device):
+        if cfg.sensor_type == "depth":
+            obs_right_key = "spot_right_depth"
+            obs_left_key = "spot_left_depth"
+        elif cfg.sensor_type == "gray":
+            obs_right_key = "spot_right_gray"
+            obs_left_key = "spot_left_gray"
+        context_key = f"context_{cfg.context_type}"
+        context_shape = (2,) if context_key == "context_waypoint" else (cfg.map_res, cfg.map_res, 2)
+        observation_space = SpaceDict(
+            {
+                obs_left_key: spaces.Box(
+                    low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
+                ),
+                obs_right_key: spaces.Box(
+                    low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
+                ),
+                "pointgoal_with_gps_compass": spaces.Box(
+                    low=np.finfo(np.float32).min,
+                    high=np.finfo(np.float32).max,
+                    shape=(2,),
+                    dtype=np.float32,
+                ),
+                context_key: spaces.Box(
+                    low=np.finfo(np.float32).min,
+                    high=np.finfo(np.float32).max,
+                    shape=context_shape,
+                    dtype=np.float32,
+                ),
+            }
+        )
+        action_dim = 3 if cfg.use_horizontal_velocity else 2
+        # Linear, angular, and horizontal velocity (in that order)
+        action_space = spaces.Box(-1.0, 1.0, (action_dim,))
+        action_space.n = action_dim
         super().__init__(
             cfg,
             observation_space,

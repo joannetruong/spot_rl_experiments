@@ -7,7 +7,7 @@ defaults:
 disable_obstacle_avoidance: True
 
 # Goal, specified relative to Spot
-goal_x: 30.0
+goal_x: 10.0
 goal_y: 0.0
 
 # Policy configs

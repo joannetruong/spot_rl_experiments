@@ -7,9 +7,9 @@ import cv2
 import hydra
 import numpy as np
 import torch.cuda
-from nav_env import SpotNavEnv
+from nav_env import SpotNavEnv, SpotContextNavEnv
 from omegaconf import OmegaConf
-from real_policy import NavPolicy
+from real_policy import NavPolicy, ContextNavPolicy
 from spot_wrapper.spot import Spot, wrap_heading
 
 @hydra.main(config_path="config", config_name="waypoint_policy_config")
@@ -19,22 +19,29 @@ def main(cfg):
     spot = Spot("RealNavEnv", cfg.disable_obstacle_avoidance)
     spot.get_lease(hijack=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    policy = NavPolicy(cfg, device)
+    policy = ContextNavPolicy(cfg, device)
     policy.reset()
 
     env = SpotContextNavEnv(spot, cfg)
     env.sensor_type = cfg.sensor_type
     waypoints = cfg.waypoints
+    global_goal_x, global_goal_y =  waypoints[999].goal_x, waypoints[999].goal_y
+    env.goal_xy = np.array([global_goal_x, global_goal_y])
+    env.wpt_xy = 0.0, 0.0
+    time.sleep(2)
 
-    env.goal_xy = waypoints[999].goal_x, waypoints[999].goal_y,
     for idx in waypoints:
+        if idx == 999:
+            continue
         policy.reset()
         goal_x, goal_y = waypoints[idx].goal_x, waypoints[idx].goal_y
-        print(f"NAVIGATING TO X: {goal_x}m, Y: {goal_y}m")
+
+        print(f"NAVIGATING TO WPT # {idx}. X: {goal_x}m, Y: {goal_y}m")
         cx, cy, cyaw = spot.get_xy_yaw()
         print("curr pose: ", cx, cy, np.rad2deg(cyaw))
         if idx == 0:
-            observations = env.reset([goal_x, goal_y])
+            observations = env.reset([global_goal_x, global_goal_y], [goal_x, goal_y])
+            time.sleep(2)
             home_x, home_y, home_t = spot.get_xy_yaw()
             print('HOME POSE: ', home_x, home_y, home_t)
         else:
@@ -52,36 +59,30 @@ def main(cfg):
         stop_time = None
         if cfg.timeout != -1:
             stop_time = time.time() + cfg.timeout
-        try:
-            while not done:
-                if cfg.debug:
-                    cv2.imwrite(
-                        f"img/left_depth_{env.num_actions}.png",
-                        (observations["spot_left_depth"] * 255),
+        while not done:
+            if cfg.debug:
+                img = np.concatenate([observations["spot_right_depth"], observations["spot_left_depth"]], axis=1)
+                cv2.imwrite(
+                    f"img/depth_{env.num_actions}.png",
+                    (img * 255),
+                )
+            action = policy.act(observations, deterministic=cfg.deterministic)
+            observations, _, done, _ = env.step(base_action=action)
+            if cfg.timeout != -1 and stop_time < time.time():
+                print("############# Timeout reached. Stopping ############# ")
+                done = True
+            if done:
+                print(
+                    "Final Agent Episode Distance: {:.3f}".format(env.episode_distance)
+                )
+                print(
+                    "Final Distance to goal: {:.3f}m".format(
+                        observations["pointgoal_with_gps_compass"][0]
                     )
-                    cv2.imwrite(
-                        f"img/right_depth_{env.num_actions}.png",
-                        (observations["spot_right_depth"] * 255),
-                    )
-                action = policy.act(observations)
-                observations, _, done, _ = env.step(base_action=action)
-                if cfg.timeout != -1 and stop_time < time.time():
-                    print("############# Timeout reached. Stopping ############# ")
-                    done = True
-                if done:
-                    print(
-                        "Final Agent Episode Distance: {:.3f}".format(env.episode_distance)
-                    )
-                    print(
-                        "Final Distance to goal: {:.3f}m".format(
-                            observations["pointgoal_with_gps_compass"][0]
-                        )
-                    )
-                    print("Final # Actions: {}".format(env.num_actions))
-                    print("Final # Collisions: {}".format(env.num_collisions))
-        except:
-            pass
-        input('press to continue')
+                )
+                print("Final # Actions: {}".format(env.num_actions))
+                print("Final # Collisions: {}".format(env.num_collisions))
+        # input('press to continue')
     time.sleep(20)
     spot.power_off()
 

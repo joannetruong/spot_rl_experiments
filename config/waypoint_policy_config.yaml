@@ -14,7 +14,12 @@ weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_-1.0_1.0_bp_
 sensor_type: depth
 policy_name: PointNavContextPolicy
 use_horizontal_velocity: False
+deterministic: True 
+
+# waypoint configs
 use_local_coords: True
+waypoint_start: -1 
+waypoint_end: -1
 
 # Control configs
 ctrl_hz: 2
@@ -22,8 +27,14 @@ max_lin_dist: 0.25 # m/s
 max_ang_dist: 0.26 # rad/s
 
 # Success criteria
-success_dist: 0.28
+success_dist: 0.45
+project_goal: -1  
+log_goal: True
 max_episode_steps: 500
+
+# context configs
+context_type: waypoint
+map_res: 256
 
 # Debug mode
 debug: False # saves images to disk

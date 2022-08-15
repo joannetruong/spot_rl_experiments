@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from base_env import SpotBaseEnv
 from spot_wrapper.spot import Spot, wrap_heading
+# from skimage.draw import disk
 
 
 class SpotNavEnv(SpotBaseEnv):
@@ -74,6 +75,7 @@ class SpotNavEnv(SpotBaseEnv):
         else:
             rho_theta = np.array([rho, wrap_heading(theta)], dtype=np.float32)
 
+        return rho_theta
 
     def get_nav_observation(self, goal_xy):
         observations = {}
@@ -125,13 +127,67 @@ class SpotContextNavEnv(SpotNavEnv):
     def __init__(self, spot: Spot, cfg):
         super().__init__(spot, cfg)
         self.wpt_xy = None
+        self.context_key = f"context_{cfg.context_type}"
+    #     if self.context_key == "context_map":
+    #         self.context_map = self.load_context_map(cfg)
+
+    # def load_context_map(self, cfg):
+    #     self.context_map = cv2.imread(cfg.map)
+    #     x_limit, y_limit, _ = self.context_map.shape
+    #     rr, cc = disk((x_limit //2, y_limit //2), 4)
+    #     self.context_map[rr, cc, 2] = 0.3
+
+        
+    def reset(self, goal_xy, wpt_xy, yaw=None):
+        print('resetting')
+        self.spot.home_robot(yaw)
+        self.goal_xy = np.array(goal_xy, dtype=np.float32)
+        self.wpt_xy = np.array(wpt_xy, dtype=np.float32)
+        self.num_actions = 0
+        self.num_collisions = 0
+        self.episode_distance = 0
+        observations = super().reset(goal_xy, yaw)
+        assert len(self.goal_xy) == 2
+        return observations
+
+    @staticmethod
+    def get_nav_success(observations, success_distance):
+        # Is the agent at the goal?
+        dist_to_goal, _ = observations[self.context_key]
+        at_goal = dist_to_goal < success_distance
+        return at_goal
+
+    def print_nav_stats(self, observations):
+        goal_rho, goal_theta = observations["pointgoal_with_gps_compass"]
+        wpt_rho, wpt_theta = observations[self.context_key]
+        if self._log_goal:
+            goal_rho = np.exp(goal_rho)
+            wpt_theta = np.exp(wpt_theta)
+        print(
+            f"Dist to goal: {goal_rho:.2f}\t"
+            f"goal_theta: {np.rad2deg(goal_theta):.2f}\t"
+            f"Dist to wpt: {wpt_rho:.2f}\t"
+            f"wpt_theta: {np.rad2deg(wpt_theta):.2f}\t"
+            f"x: {self.x:.2f}\t"
+            f"y: {self.y:.2f}\t"
+            f"yaw: {np.rad2deg(self.yaw):.2f}\t"
+            f"# actions: {self.num_actions}\t"
+            f"# collisions: {self.num_collisions}\t"
+        )
 
     def get_context_observations(self, waypoint_xy):
         observations = {}
-        rho_theta = self._compute_pointgoal(waypoint_xy)
-        observations["context_waypoint"] = rho_theta
+        if self.self.context_key == "context_waypoint":
+            rho_theta = self._compute_pointgoal(waypoint_xy)
+            observations[self.context_key] = rho_theta
+        else:
+            observations[self.context_key] = updated_map
+
+        return observations
 
     def get_observations(self):
         nav_obs = self.get_nav_observation(self.goal_xy)
         context_obs = self.get_context_observations(self.wpt_xy)
-        return nav_obs + context_obs
+        nav_obs.update(context_obs)
+        return nav_obs
+        

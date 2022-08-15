@@ -14,7 +14,7 @@ from spot_wrapper.spot import Spot, wrap_heading
 
 DOCK_ID = int(os.environ.get("SPOT_DOCK_ID", 521))
 
-@hydra.main(config_path="config", config_name="waypoint_config")
+@hydra.main(config_path="config", config_name="pointnav_waypoint_config")
 def main(cfg):
     print("Config parameters: ")
     print(OmegaConf.to_yaml(cfg))
@@ -61,35 +61,29 @@ def main(cfg):
         stop_time = None
         if cfg.timeout != -1:
             stop_time = time.time() + cfg.timeout
-        try:
-            while not done:
-                if cfg.debug:
-                    cv2.imwrite(
-                        f"img/left_depth_{env.num_actions}.png",
-                        (observations["spot_left_depth"] * 255),
+        while not done:
+            if cfg.debug:
+                img = np.concatenate([observations["spot_right_depth"], observations["spot_left_depth"]], axis=1)
+                cv2.imwrite(
+                    f"img/depth_{env.num_actions}.png",
+                    (img * 255),
+                )
+            action = policy.act(observations, deterministic=cfg.deterministic)
+            observations, _, done, _ = env.step(base_action=action)
+            if cfg.timeout != -1 and stop_time < time.time():
+                print("############# Timeout reached. Stopping ############# ")
+                done = True
+            if done:
+                print(
+                    "Final Agent Episode Distance: {:.3f}".format(env.episode_distance)
+                )
+                print(
+                    "Final Distance to goal: {:.3f}m".format(
+                        observations["pointgoal_with_gps_compass"][0]
                     )
-                    cv2.imwrite(
-                        f"img/right_depth_{env.num_actions}.png",
-                        (observations["spot_right_depth"] * 255),
-                    )
-                action = policy.act(observations)
-                observations, _, done, _ = env.step(base_action=action)
-                if cfg.timeout != -1 and stop_time < time.time():
-                    print("############# Timeout reached. Stopping ############# ")
-                    done = True
-                if done:
-                    print(
-                        "Final Agent Episode Distance: {:.3f}".format(env.episode_distance)
-                    )
-                    print(
-                        "Final Distance to goal: {:.3f}m".format(
-                            observations["pointgoal_with_gps_compass"][0]
-                        )
-                    )
-                    print("Final # Actions: {}".format(env.num_actions))
-                    print("Final # Collisions: {}".format(env.num_collisions))
-        except:
-            pass
+                )
+                print("Final # Actions: {}".format(env.num_actions))
+                print("Final # Collisions: {}".format(env.num_collisions))
         end_x, end_y, _ = spot.get_xy_yaw()
         xy_diff = np.array([end_x-goal_x, end_y-goal_y])
         time.sleep(0.25)

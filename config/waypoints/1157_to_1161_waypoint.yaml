@@ -2,6 +2,53 @@
     goal_x: 40.43
     goal_y: -8.757
   0:
-    goal_x: 2.0
+    goal_x: 1.00
     goal_y: 0.0
- 
+  1:
+    goal_x: 1.0
+    goal_y: 2.08
+  2:
+    goal_x: 2.25
+    goal_y: 2.2
+  3:
+    goal_x: 4.75
+    goal_y: 2.95
+  4:
+    goal_x: 4.9
+    goal_y: 0.0
+  5: # slope 
+    goal_x: 4.0
+    goal_y: -0.75
+  6: 
+    goal_x: 5.2
+    goal_y: -3.2
+  7:
+    goal_x: 0.91
+    goal_y: -3.14
+  8:
+    goal_x: 1.03
+    goal_y: -3.9
+  9:
+    goal_x: 0.0
+    goal_y: -4.62
+  10:
+    goal_x: 0.0
+    goal_y: -3.82
+  11:
+    goal_x: 1.15
+    goal_y: -3.66
+  12:
+    goal_x: 3.05
+    goal_y: -3.32
+  13:
+    goal_x: 4.04
+    goal_y: -1.0
+  14:
+    goal_x: 4.11
+    goal_y: 0.0
+  15:
+    goal_x: 2.82
+    goal_y: 1.0
+  16:
+    goal_x: 2.44
+    goal_y: 2.51

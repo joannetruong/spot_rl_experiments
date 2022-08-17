@@ -23,11 +23,13 @@ waypoint_end: -1
 
 # Control configs
 ctrl_hz: 2
-max_lin_dist: 0.25 # m/s
+# max_lin_dist: 0.25 # m/s
+# max_ang_dist: 0.26 # rad/s
+max_lin_dist: 0.35 # m/s
 max_ang_dist: 0.26 # rad/s
 
 # Success criteria
-success_dist: 0.45
+success_dist: 0.32
 project_goal: -1  
 log_goal: True
 max_episode_steps: 500

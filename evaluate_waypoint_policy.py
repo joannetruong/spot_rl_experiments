@@ -47,8 +47,9 @@ def main(cfg):
         else:
             if cfg.use_local_coords:
                 spot.home_robot(yaw=spot.boot_yaw)
-                cx, cy, cyaw = spot.get_xy_yaw()
-                print("homed curr pose: ", cx, cy, np.rad2deg(cyaw))
+                goal_x -= xy_diff[0]
+                goal_y -= xy_diff[1]
+            print(f'orig goal x: {goal_x}, orig goal y {goal_y}, xy_diff: {xy_diff}')
             env.wpt_xy = np.array([goal_x, goal_y], dtype=np.float32)
             env.num_actions = 0
             env.num_collisions = 0
@@ -82,6 +83,9 @@ def main(cfg):
                 )
                 print("Final # Actions: {}".format(env.num_actions))
                 print("Final # Collisions: {}".format(env.num_collisions))
+        end_x, end_y, _ = spot.get_xy_yaw()
+        xy_diff = np.array([end_x-goal_x, end_y-goal_y])
+        time.sleep(0.25)
         # input('press to continue')
     time.sleep(20)
     spot.power_off()

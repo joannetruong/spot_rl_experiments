@@ -129,6 +129,7 @@ class NavPolicy(RealPolicy):
             action_space,
             device,
         )
+        
 class ContextNavPolicy(RealPolicy):
     def __init__(self, cfg, device):
         if cfg.sensor_type == "depth":
@@ -138,7 +139,7 @@ class ContextNavPolicy(RealPolicy):
             obs_right_key = "spot_right_gray"
             obs_left_key = "spot_left_gray"
         context_key = f"context_{cfg.context_type}"
-        context_shape = (2,) if context_key == "context_waypoint" else (cfg.map_res, cfg.map_res, 2)
+        context_shape = (2,) if context_key == "context_waypoint" else (cfg.map_resolution, cfg.map_resolution, 2)
         observation_space = SpaceDict(
             {
                 obs_left_key: spaces.Box(

@@ -31,7 +31,7 @@ max_lin_dist: 0.25 # m/s
 max_ang_dist: 0.26 # rad/s
 
 # Success criteria
-success_dist: 0.32
+success_dist: 0.425
 project_goal: -1  
 log_goal: True
 max_episode_steps: 500

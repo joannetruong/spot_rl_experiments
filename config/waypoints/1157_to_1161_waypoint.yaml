@@ -15,10 +15,10 @@
     goal_y: 2.95
   4:
     goal_x: 4.9
-    goal_y: 0.0
+    goal_y: -0.75
   5: # slope 
     goal_x: 4.0
-    goal_y: -0.75
+    goal_y: 0.0
   6: 
     goal_x: 5.2
     goal_y: -3.2

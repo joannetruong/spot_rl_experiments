@@ -7,8 +7,10 @@ defaults:
 disable_obstacle_avoidance: True
 
 # Goal, specified relative to Spot
-goal_x: 10.0
-goal_y: 0.0
+# goal_x: 10.0
+# goal_y: 0.0
+goal_x: 38.0
+goal_y: -12.5
 
 # Policy configs
 # weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_rand_pitch_sd_1_ckpt_63.pth

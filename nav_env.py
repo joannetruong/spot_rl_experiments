@@ -134,14 +134,15 @@ class SpotContextNavEnv(SpotNavEnv):
             self.map_resolution = cfg.map_resolution
             self.meters_per_pixel = cfg.meters_per_pixel
             self.map_shape = (self.map_resolution, self.map_resolution, 2)
-            self.center_coord = self.map_resolution // 2
             # self.disk_radius = 1.5/self.meters_per_pixel
-            self.disk_radius = 3
+            self.disk_radius = 4
             self.map_path = os.path.join('config', cfg.map)
 
     def load_context_map(self):
         base_map = cv2.imread(self.map_path)
-        occupancy_map = cv2.resize(base_map[:, :, 0], (self.map_resolution, self.map_resolution))
+        # occupancy_map = cv2.resize(base_map[:, :, 0], (self.map_resolution, self.map_resolution))
+        ## this makes the map roughly 0.5 meters per pixel
+        occupancy_map = cv2.resize(base_map[:, :, 0], (250, 250))
         occupancy_map = np.expand_dims(occupancy_map, axis=2)
         # normalize image to 0 to 1
         occupancy_map = occupancy_map.astype(np.float32)
@@ -150,7 +151,8 @@ class SpotContextNavEnv(SpotNavEnv):
         pose_goal_map = np.zeros_like(occupancy_map)
         self.orig_map = np.concatenate([occupancy_map, pose_goal_map], axis=2)
 
-        context_map = self.crop_and_fill_map(self.orig_map, (self.center_coord, self.center_coord))
+        center_coord_x, center_coord_y = self.orig_map.shape[0] // 2, self.orig_map.shape[1] // 2
+        context_map = self.crop_and_fill_map(self.orig_map, (center_coord_x, center_coord_y))
         self.context_map = self.draw_curr_goal(context_map)
 
     def crop_at_point(self, context_map, center_coord):
@@ -183,23 +185,23 @@ class SpotContextNavEnv(SpotNavEnv):
 
     def draw_curr_goal(self, context_map):
         # draw current position (center)
-        rr, cc = disk((self.center_coord, self.center_coord), self.disk_radius)
+        center_coord = context_map.shape[0] // 2
+        rr, cc = disk((center_coord, center_coord), self.disk_radius)
         context_map[rr, cc, 1] = 1.0
 
         # Draw goal. Don't use log scale b/c we're adding it to the map
-        self.x, self.y, self.yaw = self.spot.get_xy_yaw()
-        curr_xy = np.array([self.x, self.y], dtype=np.float32)
-        rho = np.linalg.norm(curr_xy - self.goal_xy)
-        theta = np.arctan2(self.goal_xy[1] - self.y, self.goal_xy[0] - self.x) + self.yaw
+        # self.x, self.y, self.yaw = self.spot.get_xy_yaw()
+        # curr_xy = np.array([self.x, self.y], dtype=np.float32)
+        # rho = np.linalg.norm(curr_xy - self.goal_xy)
+        # theta = np.arctan2(self.goal_xy[1] - self.y, self.goal_xy[0] - self.x) + self.yaw
         # print('rho, theta: ', rho, theta)
 
-        # rho, theta  = self._compute_pointgoal(self.goal_xy)
-        # if self._log_goal:
-            # rho = np.exp(rho)
+        rho, theta  = self._compute_pointgoal(self.goal_xy)
+        if self._log_goal:
+            rho = np.exp(rho)
         # rho = self.initial_rho
         r_limit = (self.map_resolution // 2) * self.meters_per_pixel
         goal_r = np.clip(rho, -r_limit, r_limit)
-        print('goal_r, theta: ', goal_r, np.rad2deg(theta), self.yaw)
 
         # theta = np.deg2rad(90)
         x = (goal_r / self.meters_per_pixel) * np.cos(theta)
@@ -286,9 +288,14 @@ class SpotContextNavEnv(SpotNavEnv):
             self.x, self.y, self.yaw = self.spot.get_xy_yaw()
             x_diff = self.x / self.meters_per_pixel
             y_diff = self.y / self.meters_per_pixel
-            center_coord = [self.center_coord + x_diff, self.center_coord + y_diff]
-            print('center_coord: ', center_coord, x_diff, y_diff, np.rad2deg(self.yaw))
-            rotated_map = scipy.ndimage.rotate(self.orig_map, np.rad2deg(self.yaw), reshape=True)
+            center_coord_x, center_coord_y = self.orig_map.shape[0] // 2, self.orig_map.shape[1] // 2
+
+            rotated_map = scipy.ndimage.rotate(self.orig_map, np.rad2deg(-self.yaw), reshape=True)
+            # center_coord_x, center_coord_y = rotated_map.shape[0] // 2, rotated_map.shape[1] // 2
+
+            print('center_coord: ', center_coord_x, center_coord_y, x_diff, y_diff, np.rad2deg(self.yaw))
+
+            center_coord = [center_coord_x + x_diff, center_coord_y + y_diff]
             center_coord = self.get_rotated_point(self.orig_map, rotated_map, np.array(center_coord), self.yaw)
 
             context_map = self.crop_and_fill_map(rotated_map, center_coord)

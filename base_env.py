@@ -63,7 +63,7 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         base_action *= [self.max_lin_dist, self.max_lin_dist, self.max_ang_dist]
 
         base_vel = base_action * self.ctrl_hz
-        # base_vel = np.array([0.5, 0.0, 0.0])
+        # base_vel = np.array([0.0, 0.0, 0.5])
         print(
             f"STEPPING! Vx: {base_vel[0]}, Vy: {base_vel[1]}, Vt: {np.rad2deg(base_vel[2])}"
         )

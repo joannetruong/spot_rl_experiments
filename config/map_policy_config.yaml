@@ -13,15 +13,8 @@ goal_x: 38.0
 goal_y: -12.5
 
 # Policy configs
+## Trained given a map as input. Can get from 1157 to 1161 
 weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_67.pth
-# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_60.pth
-# weights: weights/map_policies/spot_depth_context_vit_map_prevact_sincos32_log_rot_128_0.5_LSTM2_sd_1_ckpt_84.pth
-# weights: weights/map_policies/spot_depth_context_vit_map_prevact_sincos32_log_rot_128_0.5_sd_1_ckpt_97.pth
-# weights: weights/map_policies/spot_depth_context_vit_map_prevact_sincos32_log_rot_128_0.5_sd_1_ckpt_99.pth
-# weights: weights/map_policies/spot_depth_context_cnn2d_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_81.pth
-# weights: weights/map_policies/spot_depth_context_cnn2d_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_98.pth
-# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_94.pth
-# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_99.pth
 sensor_type: depth
 policy_name: PointNavContextPolicy
 use_horizontal_velocity: False
@@ -45,15 +38,11 @@ max_episode_steps: 500
 
 # context configs
 context_type: map
-# map: maps/1157_map_traj_v22.png
-# map: maps/1157_map_traj_left_v2.png
-# map: maps/1157_map_traj.png
 map: maps/1157_map_traj_left_full.png
 # map: maps/1157_map_traj_left_further.png
 # map: maps/1157_map_traj_left_closer.png
 # map: maps/1157_map_straight.png
 # map: maps/1157_map_right.png
-# map: maps/1157_map_traj_right_v2.png
 map_resolution: 100
 # map_resolution: 128
 meters_per_pixel: 0.7

@@ -10,6 +10,7 @@ disable_obstacle_avoidance: True
 # Goal, specified relative to Spot
 
 # Policy configs
+## Trained given intermediate waypoints as input. Good at getting to waypoints with a consistent heading, not as good at searching for new paths
 weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_-1.0_1.0_bp_0.03_sd_2_16env_context_no_noise_log_waypoint_ckpt_64.pth
 sensor_type: depth
 policy_name: PointNavContextPolicy

@@ -10,10 +10,13 @@ disable_obstacle_avoidance: True
 # Goal, specified relative to Spot
 
 # Policy configs
-#weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_sd_1_ckpt_45.pth
-# weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_rand_pitch_sd_1_ckpt_63.pth
-# weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_bp_0.03_sd_1_ckpt_84.pth
-weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_hm3d_mf_rand_pitch_-1.0_1.0_bp_0.03_log_sd_1_ckpt_95.pth
+
+## Used in the EDR demo. Is pretty robust at avoiding obstacles/ searching for new paths, but does not like to walk long ranges
+# weights: weights/pointnav_policies/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_bp_0.03_sd_1_ckpt_84.pth
+## Finetuned ckpt 84 above using large indoor scans. Can walk long distances and search for paths, but doesn't go up/down slope
+# weights: weights/pointnav_policies/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_bp_0.03_sd_1_ft_unfurnished_ckpt_15.pth
+## Trained using log(goal_vector). Can walk long distances and go up/down slope. Isn't the best at searching for a new path
+weights: weights/pointnav_policies/spot_depth_simple_cnn_cutout_nhy_2hz_hm3d_mf_rand_pitch_-1.0_1.0_bp_0.03_log_sd_1_ckpt_95.pth
 
 sensor_type: depth
 policy_name: PointNavBaselinePolicy

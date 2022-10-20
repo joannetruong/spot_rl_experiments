@@ -5,7 +5,7 @@ import scipy.ndimage
 from base_env import SpotBaseEnv
 from spot_wrapper.spot import Spot, wrap_heading
 from skimage.draw import disk
-
+from PIL import Image
 
 class SpotNavEnv(SpotBaseEnv):
     def __init__(self, spot: Spot, cfg):
@@ -133,28 +133,35 @@ class SpotContextNavEnv(SpotNavEnv):
         if self.context_key == "context_map":
             self.map_resolution = cfg.map_resolution
             self.meters_per_pixel = cfg.meters_per_pixel
-            self.map_shape = (self.map_resolution, self.map_resolution, 2)
+            self.use_agent_map = cfg.use_agent_map
+            dim = 2 if self.use_agent_map else 1
+            self.map_shape = (self.map_resolution, self.map_resolution, dim)
             # self.disk_radius = 1.5/self.meters_per_pixel
-            self.disk_radius = 4
+            self.disk_radius = 2
             self.map_path = os.path.join('config', cfg.map)
 
     def load_context_map(self):
         base_map = cv2.imread(self.map_path)
         # occupancy_map = cv2.resize(base_map[:, :, 0], (self.map_resolution, self.map_resolution))
         ## this makes the map roughly 0.5 meters per pixel
-        occupancy_map = cv2.resize(base_map[:, :, 0], (250, 250))
+        # occupancy_map = cv2.resize(base_map[:, :, 0], (250, 250))
+        occupancy_map = base_map[:, :, 0]
         occupancy_map = np.expand_dims(occupancy_map, axis=2)
         # normalize image to 0 to 1
         occupancy_map = occupancy_map.astype(np.float32)
         occupancy_map /= np.max(occupancy_map)
 
         pose_goal_map = np.zeros_like(occupancy_map)
-        self.orig_map = np.concatenate([occupancy_map, pose_goal_map], axis=2)
+        if self.use_agent_map:
+            self.orig_map = np.concatenate([occupancy_map, pose_goal_map], axis=2)
+        else:
+            self.orig_map = occupancy_map
 
         center_coord_x, center_coord_y = self.orig_map.shape[0] // 2, self.orig_map.shape[1] // 2
         context_map = self.crop_and_fill_map(self.orig_map, (center_coord_x, center_coord_y))
-        self.context_map = self.draw_curr_goal(context_map)
-
+        if self.use_agent_map:
+            self.context_map = self.draw_curr_goal(context_map)
+    
     def crop_at_point(self, context_map, center_coord):
         h, w = context_map.shape[:2]
         a_x, a_y = center_coord
@@ -170,13 +177,14 @@ class SpotContextNavEnv(SpotNavEnv):
 
     def crop_and_fill_map(self, context_map, center_coord):
         cropped_map = self.crop_at_point(context_map, center_coord)
-        # cv2.imwrite(f'debug_maps/pt_map_0_{self.num_actions}.png', cropped_map[:, :, 0]*255.0)
-        # cv2.imwrite(f'debug_maps/pt_map_1_{self.num_actions}.png', cropped_map[:, :, 1]*255.0)
         lh, lw = cropped_map.shape[:2]
 
         pad_top = max(int(self.map_resolution // 2 - center_coord[0] - 1), 0)
         pad_left = max(int(self.map_resolution // 2 - center_coord[1] - 1), 0)
-        base_map = np.zeros(self.map_shape)
+        # base_map = np.zeros(self.map_shape)
+        base_map = np.ones(self.map_shape)
+        if self.use_agent_map:
+            base_map[:, :, 1]  *= 0.0
 
         base_map[
             pad_top : pad_top + lh, pad_left : pad_left + lw, 0
@@ -204,8 +212,8 @@ class SpotContextNavEnv(SpotNavEnv):
         goal_r = np.clip(rho, -r_limit, r_limit)
 
         # theta = np.deg2rad(90)
-        x = (goal_r / self.meters_per_pixel) * np.cos(theta)
-        y = (goal_r / self.meters_per_pixel) * np.sin(theta)
+        x = (goal_r / self.meters_per_pixel) * np.cos(theta - self.yaw)
+        y = (goal_r / self.meters_per_pixel) * np.sin(theta - self.yaw)
 
         mid = self.map_resolution // 2
         row, col = np.clip(
@@ -220,6 +228,7 @@ class SpotContextNavEnv(SpotNavEnv):
 
         rr, cc = disk((row, col), self.disk_radius)
         context_map[rr, cc, 1] = 1.0
+
         return context_map
 
     def get_rotated_point(self, img, im_rot, xy, agent_rotation):
@@ -279,6 +288,10 @@ class SpotContextNavEnv(SpotNavEnv):
             f"# collisions: {self.num_collisions}\t"
         )
 
+    def pil_rotate(self, image, angle, expand):
+        rotated_pil = Image.fromarray(image).rotate(angle, Image.NEAREST, expand=expand, fillcolor="white")
+        return np.array(rotated_pil)
+
     def get_context_observations(self, waypoint_xy):
         observations = {}
         if self.context_key == "context_waypoint":
@@ -290,22 +303,33 @@ class SpotContextNavEnv(SpotNavEnv):
             y_diff = self.y / self.meters_per_pixel
             center_coord_x, center_coord_y = self.orig_map.shape[0] // 2, self.orig_map.shape[1] // 2
 
-            rotated_map = scipy.ndimage.rotate(self.orig_map, np.rad2deg(-self.yaw), reshape=True)
+            rotated_map_0 = self.pil_rotate(
+                np.array(self.orig_map[:, :, 0]), np.rad2deg(-self.yaw), expand=True
+            )
+            if self.use_agent_map:
+                rotated_map_1 = self.pil_rotate(
+                    np.array(self.orig_map[:, :, 1]), np.rad2deg(-self.yaw), expand=True
+                )
+                rotated_map = np.stack([rotated_map_0,rotated_map_1], axis=2)
+            else:
+                rotated_map = np.expand_dims(rotated_map_0, axis=2)
             # center_coord_x, center_coord_y = rotated_map.shape[0] // 2, rotated_map.shape[1] // 2
-
-            print('center_coord: ', center_coord_x, center_coord_y, x_diff, y_diff, np.rad2deg(self.yaw))
 
             center_coord = [center_coord_x + x_diff, center_coord_y + y_diff]
             center_coord = self.get_rotated_point(self.orig_map, rotated_map, np.array(center_coord), self.yaw)
 
             context_map = self.crop_and_fill_map(rotated_map, center_coord)
-            self.context_map = self.draw_curr_goal(context_map)
+            if self.use_agent_map:
+                self.context_map = self.draw_curr_goal(context_map)
+            else:
+                self.context_map = context_map
             observations[self.context_key] = self.context_map.astype(np.float32)
         return observations
 
     def get_observations(self):
         nav_obs = self.get_nav_observation(self.goal_xy)
         context_obs = self.get_context_observations(self.wpt_xy)
+
         nav_obs.update(context_obs)
         return nav_obs
         

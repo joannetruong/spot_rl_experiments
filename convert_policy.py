@@ -18,12 +18,20 @@ if __name__ == "__main__":
     orig_ckpt["config"]["RL"]["POLICY"]["ACTION_DIST"]["max_std"] = 1
     orig_ckpt["config"]["RL"]["POLICY"]["ACTION_DIST"]["min_log_std"] = -5
     orig_ckpt["config"]["RL"]["POLICY"]["ACTION_DIST"]["max_log_std"] = 2
+    orig_ckpt["config"]["RL"]["PPO"]["tgt_hidden_size"] = 512
+    orig_ckpt["config"]["RL"]["PPO"]["use_prev_action"] = False
+    orig_ckpt["config"]["RL"]["PPO"]["tgt_encoding"] = "linear_2"
+    orig_ckpt["config"]["RL"]["DDPPO"]["num_recurrent_layers"] = 1
+    orig_ckpt["config"]["RL"]["DDPPO"]["rnn_type"] = "GRU"
     orig_ckpt["config"].freeze()
     checkpoint = {
         "state_dict": orig_ckpt["state_dict"],
         "config": orig_ckpt["config"],
     }
 
+    print(orig_ckpt)
+    weights_basename = weights.split('.pth')[0]
     torch.save(
-        checkpoint, cfg.weights + "_v2"
+        checkpoint, weights_basename + "_v2.pth"
     )  
+    print('saved as: ', weights_basename + "_v2.pth")

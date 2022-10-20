@@ -2,6 +2,7 @@
 
 import argparse
 import time
+import os
 
 import cv2
 import hydra
@@ -32,10 +33,15 @@ def main(cfg):
     done = False
     time.sleep(2)
     stop_time = None
+
+    debug_map_dir = cfg.map.split('/')[-1]
+    os.makedirs(f'debug/debug_map_{debug_map_dir}', exist_ok = True)
+
     if cfg.timeout != -1:
         stop_time = time.time() + cfg.timeout
     try:
         while not done:
+
             if cfg.use_keyboard:
                 input('press to continue')
             if cfg.debug:
@@ -46,8 +52,7 @@ def main(cfg):
                 )
                 debug_map = observations["context_map"][:, :, 0]
                 debug_map[observations["context_map"][:, :, 1] == 1] = 0.3
-                cv2.imwrite(f'debug/debug_map_{env.num_actions}.png', debug_map*255.0)
-
+                cv2.imwrite(f'debug/debug_map_{debug_map_dir}/debug_map_{env.num_actions}.png', debug_map*255.0)
 
             action = policy.act(observations, deterministic=cfg.deterministic)
             observations, _, done, _ = env.step(base_action=action)

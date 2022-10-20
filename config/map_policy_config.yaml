@@ -4,7 +4,7 @@ defaults:
   - override hydra/job_logging: disabled
 
 # Disable obstacle avoidance
-disable_obstacle_avoidance: False
+disable_obstacle_avoidance: True
 
 # Goal, specified relative to Spot
 # goal_x: 38.0
@@ -14,17 +14,10 @@ goal_y: 0.0
 
 # Policy configs
 ## Trained given a map as input. Can get from 1157 to 1161 
-# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_67_v2.pth
-# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_sd_1_ckpt_83.pth
-# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_robot_scale_0.1_sd_1_ckpt_86.pth
-# weights: weights/real_test/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_no_sc_robot_scale_0.1_sd_1_ckpt_68.pth
-# weights: weights/real_test/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_robot_scale_0.1_bp_0.3_sd_1_ckpt_63.pth
-# weights: weights/real_test/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_robot_scale_0.1_LSTM2_sd_1_ckpt_97.pth
-# weights: weights/real_test/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_256_-1.0_no_sc_robot_scale_0.1_sd_1_ckpt_70.pth
-# weights: weights/real_test/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_256_-1.0_robot_scale_0.1_sd_1_ckpt_70.pth
-# weights: weights/real_test/spot_depth_context_vit_map_prevact_sincos32_log_rot_128_-1.0_robot_scale_0.1_sd_1_ckpt_90.pth
-weights: weights/real_test/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_sd_1_ckpt_67.pth
-# weights: weights/real_test/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_sd_1_ckpt_99.pth
+# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_67.pth
+## New policy using adaptive map scaling
+weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_linear512_log_rot_100_-1.0_sd_1_ckpt.67.pth
+# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_linear512_log_rot_100_-1.0_sd_1_ckpt.92.pth
 
 sensor_type: depth
 policy_name: PointNavContextPolicy
@@ -49,9 +42,9 @@ max_episode_steps: 500
 
 # context configs
 context_type: map
-# map: maps/coda_map_v2.png
+# map: maps/coda_map.png
 # map: maps/coda_map_left.png
-map: maps/coda_map_right.png
+map: maps/coda_map_right_v3.png
 # map: maps/map_white.png
 # map: maps/1157_map_traj_left_further.png
 # map: maps/1157_map_traj_left_closer.png
@@ -60,6 +53,7 @@ map: maps/coda_map_right.png
 map_resolution: 100
 # map_resolution: 128
 meters_per_pixel: 0.15
+# meters_per_pixel: 0.08
 use_agent_map: True
 
 # Debug mode

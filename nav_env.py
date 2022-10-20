@@ -212,8 +212,11 @@ class SpotContextNavEnv(SpotNavEnv):
         goal_r = np.clip(rho, -r_limit, r_limit)
 
         # theta = np.deg2rad(90)
-        x = (goal_r / self.meters_per_pixel) * np.cos(theta - self.yaw)
-        y = (goal_r / self.meters_per_pixel) * np.sin(theta - self.yaw)
+        # x = (goal_r / self.meters_per_pixel) * np.cos(theta - self.yaw)
+        # y = (goal_r / self.meters_per_pixel) * np.sin(theta - self.yaw)
+
+        x = (goal_r / self.meters_per_pixel) * np.cos(theta)
+        y = (goal_r / self.meters_per_pixel) * np.sin(theta)
 
         mid = self.map_resolution // 2
         row, col = np.clip(
@@ -288,8 +291,8 @@ class SpotContextNavEnv(SpotNavEnv):
             f"# collisions: {self.num_collisions}\t"
         )
 
-    def pil_rotate(self, image, angle, expand):
-        rotated_pil = Image.fromarray(image).rotate(angle, Image.NEAREST, expand=expand, fillcolor="white")
+    def pil_rotate(self, image, angle, expand, fillcolor="white"):
+        rotated_pil = Image.fromarray(image).rotate(angle, Image.NEAREST, expand=expand, fillcolor=fillcolor)
         return np.array(rotated_pil)
 
     def get_context_observations(self, waypoint_xy):

@@ -34,7 +34,6 @@ class RealPolicy:
         config.defrost()
         config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = []
         config.freeze()
-        print('CONFIG: ', config)
         self.policy = eval(cfg.policy_name).from_config(
             config=config,
             observation_space=observation_space,

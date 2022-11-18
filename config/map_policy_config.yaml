@@ -7,14 +7,19 @@ defaults:
 disable_obstacle_avoidance: True
 
 # Goal, specified relative to Spot
-# goal_x: 38.0
-# goal_y: -16.0
-goal_x: 38.0
-goal_y: -12.5
+#goal_x: 38.0
+#goal_y: -16.0
+goal_x: 2.0
+goal_y: 0.0
 
 # Policy configs
 ## Trained given a map as input. Can get from 1157 to 1161 
-weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_67.pth
+#weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_67.pth
+## New policy using adaptive map scaling
+# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_linear512_log_rot_100_-1.0_sd_1_ckpt_67.pth
+#weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_linear512_log_rot_100_-1.0_sd_1_ckpt_92.pth
+weights: weights/pointnav_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_robot_scale_0.1_bp_0.3_sd_1_v2_ckpt_91.pth
+
 sensor_type: depth
 policy_name: PointNavContextPolicy
 use_horizontal_velocity: False
@@ -38,17 +43,22 @@ max_episode_steps: 500
 
 # context configs
 context_type: map
-map: maps/1157_map_traj_left_full.png
-# map: maps/1157_map_traj_left_further.png
+# map: maps/coda_map.png
+# map: maps/coda_map_left.png
+# map: maps/coda_map_right_v3.png
+# map: maps/map_white.png
+map: maps/1157_map_traj_left_further.png
 # map: maps/1157_map_traj_left_closer.png
-# map: maps/1157_map_straight.png
+#map: maps/1157_map_straight.png
 # map: maps/1157_map_right.png
 map_resolution: 100
 # map_resolution: 128
-meters_per_pixel: 0.7
+#meters_per_pixel: 0.1
+meters_per_pixel: 0.8
+use_agent_map: True
 
 # Debug mode
-debug: False # saves images to disk
+debug: True # saves images to disk
 timeout: -1 # terminate if X seconds passes. Set to -1 if you don't want to use a timeout
 use_keyboard: False # wait for keyboard input before stepping robot
 

@@ -38,7 +38,6 @@ class SpotRosPublisher:
     def __init__(self, spot, verbose=False):
         rospy.init_node("spot_ros_node", disable_signals=True)
         self.spot = spot
-
         # For generating Image ROS msgs
         self.cv_bridge = CvBridge()
 
@@ -73,7 +72,6 @@ class SpotRosPublisher:
         )
         if self.use_front_gray:
             self.front_gray_pub = rospy.Publisher(FRONT_GRAY_TOPIC, Image, queue_size=1)
-
         self.pose_pub = rospy.Publisher(POSE_TOPIC, PoseStamped, queue_size=1)
         self.vis_vel_pub = rospy.Publisher(VIS_VEL_TOPIC, TwistStamped, queue_size=1)
 

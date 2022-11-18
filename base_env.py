@@ -39,6 +39,8 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         assert spot.spot_lease is not None, "Need motor control of Spot!"
         spot.power_on()
         spot.blocking_stand()
+        ## undock before running policy
+        spot.set_base_position(1.0, 0.0, 0.0, 2.0)
 
     def reset(self, *args, **kwargs):
         # Reset parameters

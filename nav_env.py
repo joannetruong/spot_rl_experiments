@@ -139,12 +139,37 @@ class SpotContextNavEnv(SpotNavEnv):
             # self.disk_radius = 1.5/self.meters_per_pixel
             self.disk_radius = 2
             self.map_path = os.path.join('config', cfg.map)
+            self.goal_map_path = os.path.join('config', cfg.map_goal)
+
+    def calculate_map_scale(self):
+        goal_dist, _  = self._compute_pointgoal(self.goal_xy)
+        desired_pix = goal_dist / self.meters_per_pixel
+        goal_map = cv2.imread(self.goal_map_path)
+
+        img_hsv = cv2.cvtColor(goal_map, cv2.COLOR_BGR2HSV)
+        # lower mask (0-10)
+        lower_red = np.array([0, 50, 50])
+        upper_red = np.array([10, 255, 255])
+        red_mask = cv2.inRange(img_hsv, lower_red, upper_red)
+        red_pixels = np.where(red_mask == 255)
+
+        lower_green = np.array([40, 50, 50])
+        upper_green = np.array([70, 255, 255])
+        green_mask = cv2.inRange(img_hsv, lower_green, upper_green)
+        green_pixels = np.where(green_mask == 255)
+
+        current_pix = np.linalg.norm(
+            np.array(red_pixels)[:, 0] - np.array(green_pixels)[:, 0], axis=0)
+
+        scale_factor = current_pix / desired_pix
+        base_map_x, base_map_y = goal_map.shape[:2]
+        return int(base_map_x / scale_factor), int(base_map_y / scale_factor)
 
     def load_context_map(self):
         base_map = cv2.imread(self.map_path)
-        # occupancy_map = cv2.resize(base_map[:, :, 0], (self.map_resolution, self.map_resolution))
-        ## this makes the map roughly 0.5 meters per pixel
-        # occupancy_map = cv2.resize(base_map[:, :, 0], (250, 250))
+        ## resize map to match meters per pixel
+        x_scale, y_scale = self.calculate_map_scale()
+        occupancy_map = cv2.resize(base_map[:, :, 0], (x_scale, y_scale))
         occupancy_map = base_map[:, :, 0]
         occupancy_map = np.expand_dims(occupancy_map, axis=2)
         # normalize image to 0 to 1

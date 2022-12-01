@@ -33,7 +33,6 @@ class RealPolicy:
         """ Disable observation transforms for real world experiments """
         config.defrost()
         config.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = []
-        
         config.freeze()
         self.policy = eval(cfg.policy_name).from_config(
             config=config,
@@ -97,12 +96,8 @@ class RealPolicy:
 
 class NavPolicy(RealPolicy):
     def __init__(self, cfg, device):
-        if cfg.sensor_type == "depth":
-            obs_right_key = "spot_right_depth"
-            obs_left_key = "spot_left_depth"
-        elif cfg.sensor_type == "gray":
-            obs_right_key = "spot_right_gray"
-            obs_left_key = "spot_left_gray"
+        obs_right_key = f"spot_right_{cfg.sensor_type}"
+        obs_left_key = f"spot_left_{cfg.sensor_type}"
         observation_space = SpaceDict(
             {
                 obs_left_key: spaces.Box(
@@ -139,7 +134,8 @@ class ContextNavPolicy(RealPolicy):
             obs_right_key = "spot_right_gray"
             obs_left_key = "spot_left_gray"
         context_key = f"context_{cfg.context_type}"
-        context_shape = (2,) if context_key == "context_waypoint" else (cfg.map_resolution, cfg.map_resolution, 2)
+        map_dim = 2 if cfg.use_agent_map else 1
+        context_shape = (2,) if context_key == "context_waypoint" else (cfg.map_resolution, cfg.map_resolution, map_dim)
         observation_space = SpaceDict(
             {
                 obs_left_key: spaces.Box(

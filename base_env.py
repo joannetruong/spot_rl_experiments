@@ -40,7 +40,6 @@ class SpotBaseEnv(SpotRosSubscriber, gym.Env):
         spot.power_on()
         spot.blocking_stand()
         ## undock before running policy
-        # spot.undock()
         spot.set_base_position(1.0, 0.0, 0.0, 2.0)
 
     def reset(self, *args, **kwargs):

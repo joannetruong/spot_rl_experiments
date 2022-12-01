@@ -2,6 +2,7 @@
 
 import argparse
 import time
+import os
 
 import cv2
 import hydra
@@ -22,7 +23,6 @@ def main(cfg):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     policy = ContextNavPolicy(cfg, device)
     policy.reset()
-
     env = SpotContextNavEnv(spot, cfg)
     env.sensor_type = cfg.sensor_type
     goal_x, goal_y = cfg.goal_x, cfg.goal_y
@@ -33,24 +33,26 @@ def main(cfg):
     done = False
     time.sleep(2)
     stop_time = None
+
+    debug_map_dir = cfg.map.split('/')[-1]
+    os.makedirs(f'debug/debug_map_{debug_map_dir}', exist_ok = True)
+
     if cfg.timeout != -1:
         stop_time = time.time() + cfg.timeout
     try:
         while not done:
+
             if cfg.use_keyboard:
                 input('press to continue')
             if cfg.debug:
                 img = np.concatenate([observations["spot_right_depth"], observations["spot_left_depth"]], axis=1)
-                # cv2.imwrite(
-                #     f"img/depth_{env.num_actions}.png",
-                #     (img * 255),
-                # )
-                # cv2.imwrite(f'debug_maps/context_map_0_{env.num_actions}.png', observations["context_map"][:, :, 0]*255.0)
-                # cv2.imwrite(f'debug_maps/context_map_1_{env.num_actions}.png', observations["context_map"][:, :, 1]*255.0)
+                cv2.imwrite(
+                    f"debug/depth_{env.num_actions}.png",
+                    (img * 255),
+                )
                 debug_map = observations["context_map"][:, :, 0]
                 debug_map[observations["context_map"][:, :, 1] == 1] = 0.3
-                cv2.imwrite(f'debug_maps/debug_map_{env.num_actions}.png', debug_map*255.0)
-
+                cv2.imwrite(f'debug/debug_map_{debug_map_dir}/debug_map_{env.num_actions}.png', debug_map*255.0)
 
             action = policy.act(observations, deterministic=cfg.deterministic)
             observations, _, done, _ = env.step(base_action=action)

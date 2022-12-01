@@ -6,3 +6,5 @@ weights
 *.bag
 *.png
 bags/
+sftp-config.json
+.idea

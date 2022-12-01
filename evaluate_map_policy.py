@@ -28,13 +28,13 @@ def main(cfg):
     goal_x, goal_y = cfg.goal_x, cfg.goal_y
     print(f"NAVIGATING TO X: {goal_x}m, Y: {goal_y}m")
     print("curr pose: ", spot.get_xy_yaw())
-    time.sleep(5)
+    time.sleep(2)
     observations = env.reset([goal_x, goal_y])
     done = False
     time.sleep(2)
     stop_time = None
 
-    debug_map_dir = cfg.map.split('/')[-1]
+    debug_map_dir = cfg.map.split('/')[-1][:-4]
     os.makedirs(f'debug/debug_map_{debug_map_dir}', exist_ok = True)
 
     if cfg.timeout != -1:
@@ -46,13 +46,11 @@ def main(cfg):
                 input('press to continue')
             if cfg.debug:
                 img = np.concatenate([observations["spot_right_depth"], observations["spot_left_depth"]], axis=1)
-                cv2.imwrite(
-                    f"debug/depth_{env.num_actions}.png",
-                    (img * 255),
-                )
+                cv2.imwrite(f'debug/debug_depth_{debug_map_dir}/depth_{env.num_actions}.png', img*255.0)
                 debug_map = observations["context_map"][:, :, 0]
-                debug_map[observations["context_map"][:, :, 1] == 1] = 0.3
-                cv2.imwrite(f'debug/debug_map_{debug_map_dir}/debug_map_{env.num_actions}.png', debug_map*255.0)
+                if cfg.use_agent_map:
+                    debug_map[observations["context_map"][:, :, 1] == 1] = 0.3
+                cv2.imwrite(f'debug/debug_map_{debug_map_dir}/map_{env.num_actions}.png', debug_map*255.0)
 
             action = policy.act(observations, deterministic=cfg.deterministic)
             observations, _, done, _ = env.step(base_action=action)

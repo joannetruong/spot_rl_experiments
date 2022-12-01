@@ -47,7 +47,8 @@ context_type: map
 # map: maps/coda_map_left.png
 # map: maps/coda_map_right_v3.png
 # map: maps/map_white.png
-map: maps/1157_map_traj_left_further.png
+map: maps/maps/1157_map_traj_left_further.png
+map_goal: maps/1157_map_traj_left_goals.png
 # map: maps/1157_map_traj_left_closer.png
 #map: maps/1157_map_straight.png
 # map: maps/1157_map_right.png

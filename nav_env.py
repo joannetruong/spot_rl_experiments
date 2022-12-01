@@ -170,7 +170,7 @@ class SpotContextNavEnv(SpotNavEnv):
         ## resize map to match meters per pixel
         x_scale, y_scale = self.calculate_map_scale()
         occupancy_map = cv2.resize(base_map[:, :, 0], (x_scale, y_scale))
-        occupancy_map = base_map[:, :, 0]
+        
         occupancy_map = np.expand_dims(occupancy_map, axis=2)
         # normalize image to 0 to 1
         occupancy_map = occupancy_map.astype(np.float32)

@@ -9,7 +9,7 @@ from habitat_baselines.rl.ddppo.policy.resnet_policy import \
     PointNavResNetPolicy
 from habitat_baselines.rl.ddppo.policy.splitnet_policy import \
     PointNavSplitNetPolicy
-from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy, PointNavContextPolicy
+from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy, PointNavContextPolicy, PointNavContextCMAPolicy
 from habitat_baselines.utils.common import batch_obs
 from habitat.config import Config
 

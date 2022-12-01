@@ -24,6 +24,7 @@ def main(cfg):
     policy.reset()
 
     env = SpotNavEnv(spot, cfg)
+
     env.sensor_type = cfg.sensor_type
     goal_x, goal_y = cfg.goal_x, cfg.goal_y
     print(f"NAVIGATING TO X: {goal_x}m, Y: {goal_y}m")

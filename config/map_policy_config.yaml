@@ -16,11 +16,10 @@ goal_y: 0.0
 ## Trained given a map as input. Can get from 1157 to 1161 
 # weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_67.pth
 ## New policy using adaptive map scaling
-weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_linear512_log_rot_100_-1.0_sd_1_ckpt.67.pth
-# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_linear512_log_rot_100_-1.0_sd_1_ckpt.92.pth
+weights: weights/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_cma_sd_1_ckpt_98.pth
 
 sensor_type: depth
-policy_name: PointNavContextPolicy
+policy_name: PointNavContextCMAPolicy
 use_horizontal_velocity: False
 deterministic: True 
 
@@ -42,18 +41,12 @@ max_episode_steps: 500
 
 # context configs
 context_type: map
-# map: maps/coda_map.png
-# map: maps/coda_map_left.png
-map: maps/coda_map_right_v3.png
-# map: maps/map_white.png
-# map: maps/1157_map_traj_left_further.png
-# map: maps/1157_map_traj_left_closer.png
-# map: maps/1157_map_straight.png
-# map: maps/1157_map_right.png
+map: maps/coda_left.png
+map_goal: maps/coda_left_goal.png
+# map: maps/coda_right.png
+# map_goal: maps/coda_right_goal.png
 map_resolution: 100
-# map_resolution: 128
 meters_per_pixel: 0.15
-# meters_per_pixel: 0.08
 use_agent_map: True
 
 # Debug mode

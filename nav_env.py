@@ -140,12 +140,21 @@ class SpotContextNavEnv(SpotNavEnv):
             self.disk_radius = 2
             self.map_path = os.path.join('config', cfg.map)
             self.goal_map_path = os.path.join('config', cfg.map_goal)
-
+            assert os.path.exists(self.map_path), (
+                f"{self.map_path} does not exist. "
+                "Make sure the map is pushed to the robot."
+            )
+            assert os.path.exists(self.goal_map_path), (
+                f"{self.goal_map_path} does not exist. "
+                "Make sure the map is pushed to the robot."
+            )
     def calculate_map_scale(self):
         goal_dist, _  = self._compute_pointgoal(self.goal_xy)
+        if self._log_goal:
+            goal_dist = np.exp(goal_dist)
+        print('goal dist: ', self.goal_xy, goal_dist, self.meters_per_pixel)
         desired_pix = goal_dist / self.meters_per_pixel
         goal_map = cv2.imread(self.goal_map_path)
-
         img_hsv = cv2.cvtColor(goal_map, cv2.COLOR_BGR2HSV)
         # lower mask (0-10)
         lower_red = np.array([0, 50, 50])
@@ -170,7 +179,7 @@ class SpotContextNavEnv(SpotNavEnv):
         ## resize map to match meters per pixel
         x_scale, y_scale = self.calculate_map_scale()
         occupancy_map = cv2.resize(base_map[:, :, 0], (x_scale, y_scale))
-        
+
         occupancy_map = np.expand_dims(occupancy_map, axis=2)
         # normalize image to 0 to 1
         occupancy_map = occupancy_map.astype(np.float32)
@@ -186,7 +195,7 @@ class SpotContextNavEnv(SpotNavEnv):
         context_map = self.crop_and_fill_map(self.orig_map, (center_coord_x, center_coord_y))
         if self.use_agent_map:
             self.context_map = self.draw_curr_goal(context_map)
-    
+
     def crop_at_point(self, context_map, center_coord):
         h, w = context_map.shape[:2]
         a_x, a_y = center_coord
@@ -316,11 +325,11 @@ class SpotContextNavEnv(SpotNavEnv):
             f"# collisions: {self.num_collisions}\t"
         )
 
-    def pil_rotate(self, image, angle, expand, fillcolor="white"):
+    def pil_rotate(self, image, angle, expand=True, fillcolor="white"):
         rotated_pil = Image.fromarray(image).rotate(angle, Image.NEAREST, expand=expand, fillcolor=fillcolor)
         return np.array(rotated_pil)
 
-    def get_context_observations(self, waypoint_xy):
+    def get_context_observations(self, waypoint_xy, expand=True, fillcolor="white"):
         observations = {}
         if self.context_key == "context_waypoint":
             rho_theta = self._compute_pointgoal(waypoint_xy)
@@ -332,11 +341,11 @@ class SpotContextNavEnv(SpotNavEnv):
             center_coord_x, center_coord_y = self.orig_map.shape[0] // 2, self.orig_map.shape[1] // 2
 
             rotated_map_0 = self.pil_rotate(
-                np.array(self.orig_map[:, :, 0]), np.rad2deg(-self.yaw), expand=True
+                np.array(self.orig_map[:, :, 0]), np.rad2deg(-self.yaw), expand=expand, fillcolor=fillcolor
             )
             if self.use_agent_map:
                 rotated_map_1 = self.pil_rotate(
-                    np.array(self.orig_map[:, :, 1]), np.rad2deg(-self.yaw), expand=True
+                    np.array(self.orig_map[:, :, 1]), np.rad2deg(-self.yaw), expand=expand, fillcolor=fillcolor
                 )
                 rotated_map = np.stack([rotated_map_0,rotated_map_1], axis=2)
             else:

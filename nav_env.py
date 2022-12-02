@@ -185,13 +185,24 @@ class SpotContextNavEnv(SpotNavEnv):
         occupancy_map = occupancy_map.astype(np.float32)
         occupancy_map /= np.max(occupancy_map)
 
+        h, w = occupancy_map.shape[:2]
+        center_coord_x, center_coord_y = occupancy_map.shape[0] // 2, occupancy_map.shape[1] // 2
+
+        # rotating large images takes a long time, 
+        # so we take a local crop of max 500x500 first
+        top = max(int(center_coord_x - 250), 0)
+        bottom = min(int(center_coord_x + 250), h)
+        left = max(int(center_coord_y - 250 ), 0)
+        right = min(int(center_coord_y + 250 ), w)
+
+        occupancy_map = occupancy_map[top:bottom, left:right, :]
+
         pose_goal_map = np.zeros_like(occupancy_map)
         if self.use_agent_map:
             self.orig_map = np.concatenate([occupancy_map, pose_goal_map], axis=2)
         else:
             self.orig_map = occupancy_map
 
-        center_coord_x, center_coord_y = self.orig_map.shape[0] // 2, self.orig_map.shape[1] // 2
         context_map = self.crop_and_fill_map(self.orig_map, (center_coord_x, center_coord_y))
         if self.use_agent_map:
             self.context_map = self.draw_curr_goal(context_map)
@@ -231,23 +242,11 @@ class SpotContextNavEnv(SpotNavEnv):
         rr, cc = disk((center_coord, center_coord), self.disk_radius)
         context_map[rr, cc, 1] = 1.0
 
-        # Draw goal. Don't use log scale b/c we're adding it to the map
-        # self.x, self.y, self.yaw = self.spot.get_xy_yaw()
-        # curr_xy = np.array([self.x, self.y], dtype=np.float32)
-        # rho = np.linalg.norm(curr_xy - self.goal_xy)
-        # theta = np.arctan2(self.goal_xy[1] - self.y, self.goal_xy[0] - self.x) + self.yaw
-        # print('rho, theta: ', rho, theta)
-
         rho, theta  = self._compute_pointgoal(self.goal_xy)
         if self._log_goal:
             rho = np.exp(rho)
-        # rho = self.initial_rho
         r_limit = (self.map_resolution // 2) * self.meters_per_pixel
         goal_r = np.clip(rho, -r_limit, r_limit)
-
-        # theta = np.deg2rad(90)
-        # x = (goal_r / self.meters_per_pixel) * np.cos(theta - self.yaw)
-        # y = (goal_r / self.meters_per_pixel) * np.sin(theta - self.yaw)
 
         x = (goal_r / self.meters_per_pixel) * np.cos(theta)
         y = (goal_r / self.meters_per_pixel) * np.sin(theta)
@@ -326,6 +325,7 @@ class SpotContextNavEnv(SpotNavEnv):
         )
 
     def pil_rotate(self, image, angle, expand=True, fillcolor="white"):
+        print('image shape: ', image.shape)
         rotated_pil = Image.fromarray(image).rotate(angle, Image.NEAREST, expand=expand, fillcolor=fillcolor)
         return np.array(rotated_pil)
 
@@ -353,9 +353,11 @@ class SpotContextNavEnv(SpotNavEnv):
             # center_coord_x, center_coord_y = rotated_map.shape[0] // 2, rotated_map.shape[1] // 2
 
             center_coord = [center_coord_x + x_diff, center_coord_y + y_diff]
+            
             center_coord = self.get_rotated_point(self.orig_map, rotated_map, np.array(center_coord), self.yaw)
 
             context_map = self.crop_and_fill_map(rotated_map, center_coord)
+            
             if self.use_agent_map:
                 self.context_map = self.draw_curr_goal(context_map)
             else:

@@ -14,6 +14,7 @@ from spot_wrapper.spot import (Spot, SpotCamIds, image_response_to_cv2,
 from std_msgs.msg import ByteMultiArray, Float32, Float32MultiArray
 
 FRONT_DEPTH_TOPIC = "/spot_cams/filtered_front_depth"
+FRONT_RAW_DEPTH_TOPIC = "/spot_cams/raw_front_depth"
 COLLISION_TOPIC = "/collision"
 FRONT_GRAY_TOPIC = "/spot_cams/front_gray"
 ROBOT_STATE_TOPIC = "/robot_state"
@@ -58,7 +59,9 @@ class SpotRosPublisher:
             self.front_depth_pub = rospy.Publisher(
                 FRONT_DEPTH_TOPIC, Image, queue_size=1
             )
-
+            self.front_raw_depth_pub = rospy.Publisher(
+                FRONT_RAW_DEPTH_TOPIC, Image, queue_size=1
+            )
         self.monitor_collision = (
             SpotCamIds.BACK_DEPTH in self.sources
             and SpotCamIds.LEFT_DEPTH in self.sources
@@ -187,6 +190,13 @@ class SpotRosPublisher:
             # Filter
             depth_merged = scale_depth_img(depth_merged, max_depth=MAX_DEPTH)
             depth_merged = np.uint8(depth_merged * 255.0)
+            # publish raw depth images
+            raw_depth_merged = cv2.resize(
+                raw_depth_merged, (256, 256), interpolation=cv2.INTER_AREA
+            )
+            raw_depth_merged = self.cv_bridge.cv2_to_imgmsg(raw_depth_merged, encoding="mono8")
+            self.front_raw_depth_pub.publish(raw_depth_merged)
+            # publish filtered depth images
             if self.filter_front_depth:
                 depth_merged = self.filter_depth(depth_merged, MAX_DEPTH)
             depth_merged = cv2.resize(
@@ -256,6 +266,13 @@ class SpotRosSubscriber:
             buff_size=2**24,
         )
         rospy.Subscriber(
+            FRONT_RAW_DEPTH_TOPIC,
+            Image,
+            self.front_raw_depth_callback,
+            queue_size=1,
+            buff_size=2**24,
+        )
+        rospy.Subscriber(
             FRONT_GRAY_TOPIC,
             Image,
             self.front_gray_callback,
@@ -278,6 +295,7 @@ class SpotRosSubscriber:
 
         # Msg holders
         self.front_depth = None
+        self.front_raw_depth = None
         self.back_depth = None
         self.collision = 0.0
         self.x = 0.0
@@ -285,6 +303,7 @@ class SpotRosSubscriber:
         self.yaw = 0.0
 
         self.front_depth_updated = False
+        self.front_raw_depth_updated = False
         self.collision_updated = False
         self.gray_updated = False
         rospy.loginfo(f"[{node_name}]: Subscribing has started.")
@@ -292,6 +311,10 @@ class SpotRosSubscriber:
     def front_depth_callback(self, msg):
         self.front_depth = msg
         self.front_depth_updated = True
+
+    def front_raw_depth_callback(self, msg):
+        self.front_raw_depth = msg
+        self.front_raw_depth_updated = True
 
     def front_gray_callback(self, msg):
         self.front_gray = msg
@@ -320,6 +343,14 @@ class SpotRosSubscriber:
             return None
         self.front_depth_updated = False
         return self.ros_to_img(self.front_depth)
+
+    @property
+    def front_raw_depth_img(self):
+        if self.front_raw_depth is None or not self.front_raw_depth_updated:
+            print("DEPTH IMAGE IS NONE!")
+            return None
+        self.front_raw_depth_updated = False
+        return self.ros_to_img(self.front_raw_depth)
 
     @property
     def collided(self):

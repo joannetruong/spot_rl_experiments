@@ -144,6 +144,12 @@ class ContextNavPolicy(RealPolicy):
                 obs_right_key: spaces.Box(
                     low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
                 ),
+                obs_left_key + "_raw": spaces.Box(
+                    low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
+                ),
+                obs_right_key + "_raw": spaces.Box(
+                    low=0.0, high=1.0, shape=(256, 128, 1), dtype=np.float32
+                ),
                 "pointgoal_with_gps_compass": spaces.Box(
                     low=np.finfo(np.float32).min,
                     high=np.finfo(np.float32).max,

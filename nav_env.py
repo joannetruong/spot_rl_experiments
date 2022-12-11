@@ -83,6 +83,7 @@ class SpotNavEnv(SpotBaseEnv):
         observations = {}
         if self.sensor_type == "depth":
             img_obs = self.front_depth_img
+            raw_img_obs = self.front_rwa_depth_img
             obs_right_key = "spot_right_depth"
             obs_left_key = "spot_left_depth"
         elif self.sensor_type == "gray":
@@ -95,6 +96,15 @@ class SpotNavEnv(SpotBaseEnv):
 
         front_obs = front_obs.reshape(*front_obs.shape[:2], 1)
         observations[obs_right_key], observations[obs_left_key] = np.split(
+            front_obs, 2, 1
+        )
+
+        # Get raw visual observations
+        front_raw_obs = np.float32(img_raw_obs) / 255.0
+        # Add dimension for channel (unsqueeze)
+
+        front_raw_obs = front_obs.reshape(*front_raw_obs.shape[:2], 1)
+        observations[obs_right_key + "_raw"], observations[obs_left_key + "_raw"] = np.split(
             front_obs, 2, 1
         )
 

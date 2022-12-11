@@ -34,7 +34,7 @@ def main(cfg):
     time.sleep(2)
     stop_time = None
 
-    debug_map_dir = cfg.map.split('/')[-1][:-4]
+    debug_map_dir = cfg.map.split('/')[-1][:-4] + time.strftime("_%Y-%m-%d-%H-%M-%S")
     os.makedirs(f'debug/debug_map_{debug_map_dir}', exist_ok = True)
 
     if cfg.timeout != -1:
@@ -47,6 +47,10 @@ def main(cfg):
             if cfg.debug:
                 img = np.concatenate([observations["spot_right_depth"], observations["spot_left_depth"]], axis=1)
                 cv2.imwrite(f'debug/debug_map_{debug_map_dir}/depth_{env.num_actions}.png', img*255.0)
+
+                img = np.concatenate([observations["spot_right_depth_raw"], observations["spot_left_depth_raw"]], axis=1)
+                cv2.imwrite(f'debug/debug_map_{debug_map_dir}/raw_depth_{env.num_actions}.png', img*255.0)
+
                 debug_map = observations["context_map"][:, :, 0]
                 if cfg.use_agent_map:
                     debug_map[observations["context_map"][:, :, 1] == 1] = 0.3

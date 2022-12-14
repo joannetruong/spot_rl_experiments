@@ -187,14 +187,18 @@ class SpotRosPublisher:
         if self.use_front_depth:
             # Merge
             depth_merged = np.hstack([depth_eyes[d] for d in depth_keys])
+
+            # publish raw depth images
+            raw_depth_merged = cv2.resize(
+                depth_merged, (256, 256), interpolation=cv2.INTER_AREA
+            )
+            raw_depth_merged = self.cv_bridge.cv2_to_imgmsg(raw_depth_merged,
+                                                            encoding="mono16")
+
             # Filter
             depth_merged = scale_depth_img(depth_merged, max_depth=MAX_DEPTH)
             depth_merged = np.uint8(depth_merged * 255.0)
-            # publish raw depth images
-            raw_depth_merged = cv2.resize(
-                raw_depth_merged, (256, 256), interpolation=cv2.INTER_AREA
-            )
-            raw_depth_merged = self.cv_bridge.cv2_to_imgmsg(raw_depth_merged, encoding="mono8")
+
             self.front_raw_depth_pub.publish(raw_depth_merged)
             # publish filtered depth images
             if self.filter_front_depth:

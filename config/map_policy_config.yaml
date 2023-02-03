@@ -4,19 +4,35 @@ defaults:
   - override hydra/job_logging: disabled
 
 # Disable obstacle avoidance
-disable_obstacle_avoidance: True
+disable_obstacle_avoidance: False
 
 # Goal, specified relative to Spot
-# goal_x: 38.0
-# goal_y: -16.0
-goal_x: 7.0
-goal_y: 0.0
+
+## Klaus
+# goal_x: 95.8
+# goal_y: 45.0
+
+# ## Tech Green
+# goal_x: 130.0
+# goal_y: -93.0
+
+# goal_x: 112.0
+# goal_y: -92.0
+
+# # CCB
+# goal_x: 90.0
+# goal_y: 28.0
+
+goal_x: 90.0
+goal_y: 30.0
 
 # Policy configs
 ## Trained given a map as input. Can get from 1157 to 1161 
 # weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_0.5_sd_1_ckpt_67.pth
 ## New policy using adaptive map scaling
-weights: weights/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_cma_sd_1_ckpt_98.pth
+# weights: weights/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_cma_sd_1_ckpt_98.pth
+# weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_cma_bp_0.3_LSTM2_sd_1_ckpt_87.pth
+weights: weights/map_policies/spot_depth_context_resnet18_map_prevact_sincos32_log_rot_100_-1.0_cma_bp_0.3_sd_1_ckpt_93.pth
 
 sensor_type: depth
 policy_name: PointNavContextCMAPolicy
@@ -37,16 +53,34 @@ max_ang_dist: 0.26 # rad/s
 success_dist: 0.35
 project_goal: -1  
 log_goal: True
-max_episode_steps: 500
+max_episode_steps: 5000
 
 # context configs
 context_type: map
-map: maps/coda_left.png
-map_goal: maps/coda_left_goal.png
-# map: maps/coda_right.png
-# map_goal: maps/coda_right_goal.png
+# map: maps/coda_left.png
+# map_goal: maps/coda_left_goal.png
+# map: maps/1157_map_traj_left_further.png
+# map_goal: maps/1157_map_traj_left_goals.png
+
+# map: maps/1157_map_traj_left_further_s.png
+# map_goal: maps/1157_map_traj_left_goals_s.png
+
+# map: maps/klaus/klaus_parking_occupancy_right_v14.png
+# map_goal: maps/klaus/klaus_parking_occupancy_goals_right_v14.png
+# meters_per_pixel: 2.0
+
+
+# map: maps/tech_green/centered_v16.png
+# map_goal: maps/tech_green/centered_goals_v16.png
+# meters_per_pixel: 2.5
+
+map: maps/ccb/centered_v17.png
+map_goal: maps/ccb/centered_goals_v17.png
+# meters_per_pixel: 1.0
+meters_per_pixel: 0.55
+# meters_per_pixel: 1.9
+
 map_resolution: 100
-meters_per_pixel: 0.15
 use_agent_map: True
 
 # Debug mode

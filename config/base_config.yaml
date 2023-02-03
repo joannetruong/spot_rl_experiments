@@ -9,16 +9,21 @@ disable_obstacle_avoidance: True
 # Goal, specified relative to Spot
 # goal_x: 10.0
 # goal_y: 0.0
-goal_x: 38.0
-goal_y: -12.5
+# goal_x: 38.0
+# goal_y: -12.5
+goal_x: 95.8
+goal_y: 45.0
+
+# goal_x: 90.0
+# goal_y: 35.0
 
 # Policy configs
 ## Used in the EDR demo. Is pretty robust at avoiding obstacles/ searching for new paths, but does not like to walk long ranges
-weights: weights/pointnav_policies/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_bp_0.03_sd_1_ckpt_84.pth
+# weights: weights/pointnav_policies/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_bp_0.03_sd_1_ckpt_84.pth
 ## Finetuned ckpt 84 above using large indoor scans. Can walk long distances and search for paths, but doesn't go up/down slope
 # weights: weights/pointnav_policies/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_bp_0.03_sd_1_ft_unfurnished_ckpt_15.pth
 ## Trained using log(goal_vector). Can walk long distances and go up/down slope. Isn't the best at searching for a new path
-# weights: weights/pointnav_policies/spot_depth_simple_cnn_cutout_nhy_2hz_hm3d_mf_rand_pitch_-1.0_1.0_bp_0.03_log_sd_1_ckpt_95.pth
+weights: weights/pointnav_policies/spot_depth_simple_cnn_cutout_nhy_2hz_hm3d_mf_rand_pitch_-1.0_1.0_bp_0.03_log_sd_1_ckpt_95.pth
 
 sensor_type: depth
 # sensor_type: gray
@@ -38,7 +43,7 @@ log_goal: True
 max_episode_steps: 1000
 
 # Debug mode
-debug: False # saves images to disk
+debug: True # saves images to disk
 timeout: -1 # terminate if X seconds passes. Set to -1 if you don't want to use a timeout
 use_keyboard: False # wait for keyboard input before stepping robot
 

@@ -1,11 +1,12 @@
 import os
+
 import cv2
 import numpy as np
 import scipy.ndimage
 from base_env import SpotBaseEnv
-from spot_wrapper.spot import Spot, wrap_heading
-from skimage.draw import disk
 from PIL import Image
+from skimage.draw import disk
+from spot_wrapper.spot import Spot, wrap_heading
 
 
 class SpotNavEnv(SpotBaseEnv):
@@ -163,7 +164,7 @@ class SpotContextNavEnv(SpotNavEnv):
 
     def get_agent_map(self, base_map, goal_x, goal_y):
         h, w = base_map.shape[:2]
-        agent_map = np.zeros((h,w))
+        agent_map = np.zeros((h, w))
         # rr, cc = disk((goal_x, goal_y), self.disk_radius)
         rr, cc = disk((goal_x, goal_y), 10)
         agent_map[cc, rr] = 1.0
@@ -227,18 +228,18 @@ class SpotContextNavEnv(SpotNavEnv):
 
         # pose_goal_map = np.zeros_like(occupancy_map)
 
-
         # pose_goal_map = self.get_agent_map(base_map, self.goal_pix_x, self.goal_pix_y)
         # pose_goal_map_rz = cv2.resize(pose_goal_map, (x_scale, y_scale))
         # pose_goal_map_rz = np.expand_dims(pose_goal_map_rz, axis=2)
 
-
         pose_goal_map_rz = np.zeros_like(occupancy_map)
         orig_h, orig_w = base_map.shape[:2]
-        goal_pix_x_rz, goal_pix_y_rz = int(self.goal_pix_x * x_scale / orig_w), int(self.goal_pix_y * y_scale / orig_h)
+        goal_pix_x_rz, goal_pix_y_rz = int(self.goal_pix_x * x_scale / orig_w), int(
+            self.goal_pix_y * y_scale / orig_h
+        )
         rr, cc = disk((goal_pix_x_rz, goal_pix_y_rz), self.disk_radius)
         pose_goal_map_rz[cc, rr, 0] = 1.0
-        cv2.imwrite("debug.png", pose_goal_map_rz*255)
+        cv2.imwrite("debug.png", pose_goal_map_rz * 255)
 
         if self.use_agent_map:
             self.orig_map = np.concatenate([occupancy_map, pose_goal_map_rz], axis=2)
@@ -251,7 +252,6 @@ class SpotContextNavEnv(SpotNavEnv):
 
         if self.use_agent_map:
             self.context_map = self.draw_curr_goal(context_map)
-
 
     def crop_at_point(self, context_map, center_coord):
         h, w = context_map.shape[:2]
@@ -382,7 +382,9 @@ class SpotContextNavEnv(SpotNavEnv):
         )
         return np.array(rotated_pil)
 
-    def get_context_observations(self, waypoint_xy=None, expand=True, fillcolor="white"):
+    def get_context_observations(
+        self, waypoint_xy=None, expand=True, fillcolor="white"
+    ):
         observations = {}
         if self.context_key == "context_waypoint":
             rho_theta = self._compute_pointgoal(waypoint_xy)

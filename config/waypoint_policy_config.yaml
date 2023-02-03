@@ -1,6 +1,6 @@
 defaults:
   - _self_
-  - waypoints: 1157_to_1161_waypoint.yaml
+  - waypoints: klaus_waypoint.yaml
   - override hydra/hydra_logging: disabled
   - override hydra/job_logging: disabled
 
@@ -11,7 +11,7 @@ disable_obstacle_avoidance: True
 
 # Policy configs
 ## Trained given intermediate waypoints as input. Good at getting to waypoints with a consistent heading, not as good at searching for new paths
-weights: weights/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_-1.0_1.0_bp_0.03_sd_2_16env_context_no_noise_log_waypoint_ckpt_64.pth
+weights: weights/waypoint_policies/spot_depth_simple_cnn_cutout_nhy_2hz_ny_rand_pitch_-1.0_1.0_bp_0.03_sd_2_16env_context_no_noise_log_waypoint_ckpt_64_v2.pth
 sensor_type: depth
 policy_name: PointNavContextPolicy
 use_horizontal_velocity: False
@@ -38,6 +38,7 @@ max_episode_steps: 500
 # context configs
 context_type: waypoint
 map_res: 256
+use_agent_map: False
 
 # Debug mode
 debug: False # saves images to disk

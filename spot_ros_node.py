@@ -9,8 +9,7 @@ from cv_bridge import CvBridge
 from depth_map_utils import fill_in_fast, fill_in_multiscale
 from geometry_msgs.msg import PoseStamped, TwistStamped
 from sensor_msgs.msg import CompressedImage, Image
-from spot_wrapper.spot import (Spot, SpotCamIds, image_response_to_cv2,
-                               scale_depth_img)
+from spot_wrapper.spot import Spot, SpotCamIds, image_response_to_cv2, scale_depth_img
 from std_msgs.msg import ByteMultiArray, Float32, Float32MultiArray
 
 FRONT_DEPTH_TOPIC = "/spot_cams/filtered_front_depth"
@@ -32,6 +31,7 @@ SRC2MSG = {
 }
 MAX_DEPTH = 3.5
 FILTER_FRONT_DEPTH = True
+CLAMP_BOTTOM_HALF = False
 CLAMP_DEPTH = True
 
 
@@ -192,8 +192,9 @@ class SpotRosPublisher:
             raw_depth_merged = cv2.resize(
                 depth_merged, (256, 256), interpolation=cv2.INTER_AREA
             )
-            raw_depth_merged = self.cv_bridge.cv2_to_imgmsg(raw_depth_merged,
-                                                            encoding="mono16")
+            raw_depth_merged = self.cv_bridge.cv2_to_imgmsg(
+                raw_depth_merged, encoding="mono16"
+            )
 
             # Filter
             depth_merged = scale_depth_img(depth_merged, max_depth=MAX_DEPTH)
@@ -232,7 +233,16 @@ class SpotRosPublisher:
         recovery_pixels = np.logical_and(img != 0, filtered_depth_img == 0)
         filtered_depth_img[recovery_pixels] = img[recovery_pixels]
         if CLAMP_DEPTH:
-            filtered_depth_img[filtered_depth_img == 0] = 255
+            if CLAMP_BOTTOM_HALF:
+                filtered_depth_img[filtered_depth_img == 0] = 255
+            else:
+                h, w = filtered_depth_img.shape[:2]
+                filtered_depth_top = np.copy(filtered_depth_img[: h // 2, :])
+                filtered_depth_bottom = np.copy(filtered_depth_img[h // 2 :, :])
+                filtered_depth_top[filtered_depth_top == 0] = 255
+                filtered_depth_img = np.vstack(
+                    [filtered_depth_top, filtered_depth_bottom]
+                )
         return filtered_depth_img
 
     @staticmethod

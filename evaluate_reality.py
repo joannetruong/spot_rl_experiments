@@ -3,9 +3,11 @@
 import argparse
 import time
 
+import os
 import cv2
 import hydra
 import numpy as np
+import datetime
 import torch.cuda
 from nav_env import SpotNavEnv
 from omegaconf import OmegaConf
@@ -34,14 +36,21 @@ def main(cfg):
     done = False
     time.sleep(2)
     stop_time = None
+    month_day = f"{datetime.datetime.now().month}-{datetime.datetime.now().day}"
+    debug_depth_dir_full = f"debug/{month_day}/debug_baseline_depth_{int(time.time())}"
+    os.makedirs(debug_depth_dir_full, exist_ok=True)
+
     if cfg.timeout != -1:
         stop_time = time.time() + cfg.timeout
     try:
         while not done:
             if cfg.debug:
-                img = np.concatenate([observations["spot_right_depth"], observations["spot_left_depth"]], axis=1)
+                img = np.concatenate(
+                    [observations["spot_right_depth"], observations["spot_left_depth"]],
+                    axis=1,
+                )
                 cv2.imwrite(
-                    f"img/depth_{env.num_actions}.png",
+                    f"{debug_depth_dir_full}/depth_{env.num_actions}.png",
                     (img * 255),
                 )
             action = policy.act(observations, deterministic=cfg.deterministic)

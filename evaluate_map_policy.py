@@ -7,6 +7,7 @@ import os
 import cv2
 import hydra
 import numpy as np
+import datetime
 import torch.cuda
 from nav_env import SpotNavEnv, SpotContextNavEnv
 from omegaconf import OmegaConf
@@ -34,8 +35,17 @@ def main(cfg):
     time.sleep(2)
     stop_time = None
 
-    debug_map_dir = cfg.map.split('/')[-1][:-4]
-    os.makedirs(f'debug/debug_map_{debug_map_dir}', exist_ok = True)
+    debug_map_dir = cfg.map.split("/")[1]
+    debug_map_ver_dir = cfg.map.split("/")[2]
+    month_day = f"{datetime.datetime.now().month}-{datetime.datetime.now().day}"
+    
+    debug_map_dir_full = f"debug/{month_day}/debug_map_{debug_map_dir}_{debug_map_ver_dir}_{int(time.time())}"
+    debug_depth_dir_full = f"debug/{month_day}/debug_depth_{debug_map_dir}_{debug_map_ver_dir}_{int(time.time())}"
+
+    print('making map dir: ', debug_map_dir_full)
+    print('making depth dir: ', debug_depth_dir_full)
+    os.makedirs(debug_map_dir_full, exist_ok=True)
+    os.makedirs(debug_depth_dir_full, exist_ok=True)
 
     if cfg.timeout != -1:
         stop_time = time.time() + cfg.timeout
@@ -43,14 +53,23 @@ def main(cfg):
         while not done:
 
             if cfg.use_keyboard:
-                input('press to continue')
+                input("press to continue")
             if cfg.debug:
-                img = np.concatenate([observations["spot_right_depth"], observations["spot_left_depth"]], axis=1)
-                cv2.imwrite(f'debug/debug_depth_{debug_map_dir}/depth_{env.num_actions}.png', img*255.0)
+                img = np.concatenate(
+                    [observations["spot_right_depth"], observations["spot_left_depth"]],
+                    axis=1,
+                )
+                cv2.imwrite(
+                    f"{debug_depth_dir_full}/depth_{env.num_actions}.png",
+                    img * 255.0,
+                )
                 debug_map = observations["context_map"][:, :, 0]
                 if cfg.use_agent_map:
                     debug_map[observations["context_map"][:, :, 1] == 1] = 0.3
-                cv2.imwrite(f'debug/debug_map_{debug_map_dir}/map_{env.num_actions}.png', debug_map*255.0)
+                cv2.imwrite(
+                    f"{debug_map_dir_full}/map_{env.num_actions}.png",
+                    debug_map * 255.0,
+                )
 
             action = policy.act(observations, deterministic=cfg.deterministic)
             observations, _, done, _ = env.step(base_action=action)
